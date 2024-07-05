@@ -8,7 +8,7 @@ package sysinfo
 
 import "syscall"
 
-func osCpuInfoName() string {
+func osCPUInfoName() string {
 	var u syscall.Utsname
 
 	if errno := syscall.Uname(&u); errno != nil {
