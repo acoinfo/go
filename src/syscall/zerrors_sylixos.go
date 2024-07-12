@@ -545,6 +545,7 @@ const (
 	MAP_SHARED                        = 0x1
 	MCL_CURRENT                       = 0x1
 	MCL_FUTURE                        = 0x2
+	MNT_FORCE                         = 0x1
 	MSG_CMSG_CLOEXEC                  = 0x40000
 	MSG_CTRUNC                        = 0x1000
 	MSG_DONTWAIT                      = 0x8
