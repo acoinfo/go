@@ -765,7 +765,7 @@ func runInstall(pkg string, ch chan struct{}) {
 			elem = "go_bootstrap"
 		}
 		link = []string{pathf("%s/link", tooldir)}
-		if goos == "android" {
+		if goos == "android" || goos == "sylixos" {
 			link = append(link, "-buildmode=pie")
 		}
 		if goldflags != "" {
