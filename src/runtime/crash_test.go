@@ -973,6 +973,10 @@ func TestG0StackOverflow(t *testing.T) {
 		testenv.SkipFlaky(t, 62671)
 	}
 
+	if runtime.GOOS == "sylixos" {
+		testenv.SkipFlaky(t, 26061)
+	}
+
 	if os.Getenv("TEST_G0_STACK_OVERFLOW") != "1" {
 		cmd := testenv.CleanCmdEnv(testenv.Command(t, testenv.Executable(t), "-test.run=^TestG0StackOverflow$", "-test.v"))
 		cmd.Env = append(cmd.Env, "TEST_G0_STACK_OVERFLOW=1")

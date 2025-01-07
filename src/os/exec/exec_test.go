@@ -51,7 +51,7 @@ func init() {
 	if os.Getenv("GO_EXEC_TEST_PID") != "" {
 		return
 	}
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" || runtime.GOOS == "sylixos" {
 		return
 	}
 	for fd := uintptr(3); fd <= 100; fd++ {
@@ -627,6 +627,10 @@ func TestPipeLookPathLeak(t *testing.T) {
 			}
 		}
 		return fds
+	}
+
+	if runtime.GOOS == "sylixos" { //ACOINFO TODO : Wait for netpoll start, because it used 3 fds.
+		time.Sleep(time.Second)
 	}
 
 	old := map[uintptr]bool{}

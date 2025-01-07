@@ -2199,6 +2199,9 @@ func forEachPInternal(fn func(*p)) {
 			// Requires system stack.
 			if notetsleep(&sched.safePointNote, 100*1000) {
 				noteclear(&sched.safePointNote)
+				if GOOS == "sylixos" && sched.safePointWait != 0 {
+					continue
+				}
 				break
 			}
 			preemptall()
@@ -6497,7 +6500,7 @@ func preemptone(pp *p) bool {
 	gp.stackguard0 = stackPreempt
 
 	// Request an async preemption of this P.
-	if preemptMSupported && debug.asyncpreemptoff == 0 {
+	if preemptMSupported && GOOS != "sylixos" && debug.asyncpreemptoff == 0 {
 		pp.preempt = true
 		preemptM(mp)
 	}

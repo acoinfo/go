@@ -1753,6 +1753,7 @@ func buildModeSupported(compiler, buildmode, goos, goarch string) bool {
 			"freebsd/amd64",
 			"darwin/amd64", "darwin/arm64",
 			"windows/amd64", "windows/386", "windows/arm64",
+			"sylixos/amd64", "sylixos/arm64",
 			"wasip1/wasm":
 			return true
 		}
@@ -1773,14 +1774,16 @@ func buildModeSupported(compiler, buildmode, goos, goarch string) bool {
 			"ios/amd64", "ios/arm64",
 			"aix/ppc64",
 			"openbsd/arm64",
-			"windows/386", "windows/amd64", "windows/arm", "windows/arm64":
+			"windows/386", "windows/amd64", "windows/arm", "windows/arm64",
+			"sylixos/amd64", "sylixos/arm64":
 			return true
 		}
 		return false
 
 	case "shared":
 		switch platform {
-		case "linux/386", "linux/amd64", "linux/arm", "linux/arm64", "linux/ppc64le", "linux/s390x":
+		case "linux/386", "linux/amd64", "linux/arm", "linux/arm64", "linux/ppc64le", "linux/s390x",
+			"sylixos/amd64", "sylixos/arm64":
 			return true
 		}
 		return false
@@ -1790,7 +1793,8 @@ func buildModeSupported(compiler, buildmode, goos, goarch string) bool {
 		case "linux/amd64", "linux/arm", "linux/arm64", "linux/386", "linux/loong64", "linux/riscv64", "linux/s390x", "linux/ppc64le",
 			"android/amd64", "android/386",
 			"darwin/amd64", "darwin/arm64",
-			"freebsd/amd64":
+			"freebsd/amd64",
+			"sylixos/amd64", "sylixos/arm64":
 			return true
 		}
 		return false
