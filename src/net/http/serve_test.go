@@ -7135,6 +7135,11 @@ func testParseFormCleanup(t *testing.T, mode testMode) {
 			return
 		}
 		w.Write([]byte(of.Name()))
+
+		if runtime.GOOS == "sylixos" {
+			// SylixOS need close file
+			of.Close()
+		}
 	}))
 
 	fBuf := new(bytes.Buffer)

@@ -12,16 +12,21 @@ TEXT runtime·load_g(SB),NOSPLIT,$0
 #ifndef GOOS_darwin
 #ifndef GOOS_openbsd
 #ifndef GOOS_windows
+#ifndef GOOS_sylixos
 	MOVB	runtime·iscgo(SB), R0
 	CBZ	R0, nocgo
+#endif
 #endif
 #endif
 #endif
 
 	MRS_TPIDR_R0
 #ifdef TLS_darwin
+#ifdef GOOS_sylixos
 	// Darwin sometimes returns unaligned pointers
+	// Maybe Sylixos does it too?
 	AND	$0xfffffffffffffff8, R0
+#endif
 #endif
 	MOVD	runtime·tls_g(SB), R27
 	MOVD	(R0)(R27), g
@@ -33,16 +38,21 @@ TEXT runtime·save_g(SB),NOSPLIT,$0
 #ifndef GOOS_darwin
 #ifndef GOOS_openbsd
 #ifndef GOOS_windows
+#ifndef GOOS_sylixos
 	MOVB	runtime·iscgo(SB), R0
 	CBZ	R0, nocgo
+#endif
 #endif
 #endif
 #endif
 
 	MRS_TPIDR_R0
 #ifdef TLS_darwin
+#ifdef GOOS_sylixos
 	// Darwin sometimes returns unaligned pointers
+	// Maybe Sylixos does it too?
 	AND	$0xfffffffffffffff8, R0
+#endif
 #endif
 	MOVD	runtime·tls_g(SB), R27
 	MOVD	g, (R0)(R27)

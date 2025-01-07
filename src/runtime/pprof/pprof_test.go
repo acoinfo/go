@@ -416,6 +416,30 @@ func parseProfile(t *testing.T, valBytes []byte, f func(uintptr, []*profile.Loca
 	return p
 }
 
+func cpuProfilingBroken() bool {
+	switch runtime.GOOS {
+	case "plan9":
+		// Profiling unimplemented.
+		return true
+	case "aix":
+		// See https://golang.org/issue/45170.
+		return true
+	case "ios", "dragonfly", "netbsd", "illumos", "solaris":
+		// See https://golang.org/issue/13841.
+		return true
+	case "openbsd":
+		if runtime.GOARCH == "arm" || runtime.GOARCH == "arm64" {
+			// See https://golang.org/issue/13841.
+			return true
+		}
+	case "sylixos":
+		// Profiling SIG will only send to main process main thread.
+		return true
+	}
+
+	return false
+}
+
 // testCPUProfile runs f under the CPU profiler, checking for some conditions specified by need,
 // as interpreted by matches, and returns the parsed profile.
 func testCPUProfile(t *testing.T, matches profileMatchFunc, f func(dur time.Duration)) *profile.Profile {
@@ -631,8 +655,8 @@ func TestCPUProfileWithFork(t *testing.T) {
 	}
 
 	heap := 1 << 30
-	if runtime.GOOS == "android" {
-		// Use smaller size for Android to avoid crash.
+	if runtime.GOOS == "android" || runtime.GOOS == "sylixos" {
+		// Use smaller size for Android or SylixOS to avoid crash.
 		heap = 100 << 20
 	}
 	if runtime.GOOS == "windows" && runtime.GOARCH == "arm" {
