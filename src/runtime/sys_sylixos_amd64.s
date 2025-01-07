@@ -52,16 +52,14 @@ TEXT runtime·sigfwd(SB),NOSPLIT,$0-32
 	MOVL	sig+8(FP),   DI
 	MOVQ	info+16(FP), SI
 	MOVQ	ctx+24(FP),  DX
-	PUSHQ	BP
-	MOVQ	SP, BP
-	ANDQ	$~15, SP     // alignment for x86_64 ABI
+	MOVQ	SP, BX		// callee-saved
+	ANDQ	$~15, SP	// alignment for x86_64 ABI
 	CALL	AX
-	MOVQ	BP, SP
-	POPQ	BP
+	MOVQ	BX, SP
 	RET
 
 // Called using C ABI.
-TEXT runtime·sigtramp(SB),NOSPLIT|TOPFRAME,$0
+TEXT runtime·sigtramp(SB),NOSPLIT|TOPFRAME|NOFRAME,$0
 	// Transition from C ABI to Go ABI.
 	PUSH_REGS_HOST_TO_ABI0()
 
@@ -265,8 +263,6 @@ TEXT runtime·sched_yield_trampoline(SB),NOSPLIT,$0
 	RET
 
 TEXT runtime·mmap_trampoline(SB),NOSPLIT,$0
-	PUSHQ	BP			// make a frame; keep stack aligned
-	MOVQ	SP, BP
 	MOVQ	DI, BX
 	MOVQ	0(BX), DI		// arg 1 addr
 	MOVQ	8(BX), SI		// arg 2 len
@@ -280,23 +276,19 @@ TEXT runtime·mmap_trampoline(SB),NOSPLIT,$0
 	JNE	ok
 	CALL	libc_errno(SB)
 	MOVLQSX	(AX), DX		// errno
-	XORQ	AX, AX
+	XORL	AX, AX
 ok:
 	MOVQ	AX, 32(BX)
 	MOVQ	DX, 40(BX)
-	POPQ	BP
 	RET
 
 TEXT runtime·munmap_trampoline(SB),NOSPLIT,$0
-	PUSHQ	BP
-	MOVQ	SP, BP
 	MOVQ	8(DI), SI		// arg 2 len
 	MOVQ	0(DI), DI		// arg 1 addr
 	CALL	libc_munmap(SB)
 	TESTQ	AX, AX
 	JEQ	2(PC)
 	MOVL	$0xf1, 0xf1  // crash
-	POPQ	BP
 	RET
 
 TEXT runtime·open_trampoline(SB),NOSPLIT,$0

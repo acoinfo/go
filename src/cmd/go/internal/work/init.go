@@ -232,7 +232,7 @@ func buildModeInit() {
 		ldBuildmode = "exe"
 		if platform.DefaultPIE(cfg.Goos, cfg.Goarch, cfg.BuildRace) {
 			ldBuildmode = "pie"
-			if cfg.Goos != "windows" && !gccgo {
+			if cfg.Goos != "windows" && !gccgo && cfg.Goos != "sylixos" {
 				codegenArg = "-shared"
 			}
 		}

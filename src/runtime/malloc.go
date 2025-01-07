@@ -666,41 +666,43 @@ func (h *mheap) sysAlloc(n uintptr, hintList **arenaHint, register bool) (v unsa
 	}
 
 	// Try to grow the heap at a hint address.
-	for *hintList != nil {
-		hint := *hintList
-		p := hint.addr
-		if hint.down {
-			p -= n
-		}
-		if p+n < p {
-			// We can't use this, so don't ask.
-			v = nil
-		} else if arenaIndex(p+n-1) >= 1<<arenaBits {
-			// Outside addressable heap. Can't use.
-			v = nil
-		} else {
-			v = sysReserve(unsafe.Pointer(p), n)
-		}
-		if p == uintptr(v) {
-			// Success. Update the hint.
-			if !hint.down {
-				p += n
+	if GOOS != "sylixos" {
+		for *hintList != nil {
+			hint := *hintList
+			p := hint.addr
+			if hint.down {
+				p -= n
 			}
-			hint.addr = p
-			size = n
-			break
+			if p+n < p {
+				// We can't use this, so don't ask.
+				v = nil
+			} else if arenaIndex(p+n-1) >= 1<<arenaBits {
+				// Outside addressable heap. Can't use.
+				v = nil
+			} else {
+				v = sysReserve(unsafe.Pointer(p), n)
+			}
+			if p == uintptr(v) {
+				// Success. Update the hint.
+				if !hint.down {
+					p += n
+				}
+				hint.addr = p
+				size = n
+				break
+			}
+			// Failed. Discard this hint and try the next.
+			//
+			// TODO: This would be cleaner if sysReserve could be
+			// told to only return the requested address. In
+			// particular, this is already how Windows behaves, so
+			// it would simplify things there.
+			if v != nil {
+				sysFreeOS(v, n)
+			}
+			*hintList = hint.next
+			h.arenaHintAlloc.free(unsafe.Pointer(hint))
 		}
-		// Failed. Discard this hint and try the next.
-		//
-		// TODO: This would be cleaner if sysReserve could be
-		// told to only return the requested address. In
-		// particular, this is already how Windows behaves, so
-		// it would simplify things there.
-		if v != nil {
-			sysFreeOS(v, n)
-		}
-		*hintList = hint.next
-		h.arenaHintAlloc.free(unsafe.Pointer(hint))
 	}
 
 	if size == 0 {

@@ -21,7 +21,7 @@
 // mstart_stub is the first function executed on a new thread started by pthread_create.
 // It just does some low-level setup and then calls mstart.
 // Note: called with the C calling convention.
-TEXT runtime·mstart_stub(SB),NOSPLIT,$144
+TEXT runtime·mstart_stub(SB),NOSPLIT,$160
 	// R0 points to the m.
 	// We are already on m's g0 stack.
 
@@ -29,8 +29,8 @@ TEXT runtime·mstart_stub(SB),NOSPLIT,$144
 	SAVE_R19_TO_R28(8)
 	SAVE_F8_TO_F15(88)
 
-	MOVD    m_g0(R0), g
-	BL	runtime·save_g(SB)
+	MOVD	m_g0(R0), g
+	BL	·save_g(SB)
 
 	BL	runtime·mstart(SB)
 
