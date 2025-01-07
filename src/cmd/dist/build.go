@@ -103,6 +103,7 @@ var okgoos = []string{
 	"plan9",
 	"windows",
 	"aix",
+	"sylixos",
 }
 
 // xinit handles initialization of the various global state, like goroot and goarch.
@@ -759,7 +760,7 @@ func runInstall(pkg string, ch chan struct{}) {
 			elem = "go_bootstrap"
 		}
 		link = []string{pathf("%s/link", tooldir)}
-		if goos == "android" {
+		if goos == "android" || goos == "sylixos" {
 			link = append(link, "-buildmode=pie")
 		}
 		if goldflags != "" {
@@ -1080,6 +1081,7 @@ var unixOS = map[string]bool{
 	"netbsd":    true,
 	"openbsd":   true,
 	"solaris":   true,
+	"sylixos":   true,
 }
 
 // matchtag reports whether the tag matches this build.
@@ -1821,6 +1823,8 @@ var cgoEnabled = map[string]bool{
 	"windows/amd64":   true,
 	"windows/arm":     false,
 	"windows/arm64":   true,
+	"sylixos/amd64":   true,
+	"sylixos/arm64":   true,
 }
 
 // List of platforms that are marked as broken ports.

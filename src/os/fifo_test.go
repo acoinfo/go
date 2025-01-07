@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build darwin || dragonfly || freebsd || (linux && !android) || netbsd || openbsd
+//go:build darwin || dragonfly || freebsd || (linux && !android) || netbsd || openbsd || sylixos
 
 package os_test
 
@@ -14,6 +14,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
 	"syscall"
@@ -24,8 +25,18 @@ import (
 func TestFifoEOF(t *testing.T) {
 	t.Parallel()
 
-	dir := t.TempDir()
+	var dir string
+	if runtime.GOOS == "sylixos" {
+		dir = "/dev/pipe"
+	} else {
+		dir = t.TempDir()
+	}
+
 	fifoName := filepath.Join(dir, "fifo")
+	if runtime.GOOS == "sylixos" {
+		defer os.Remove(fifoName)
+	}
+
 	if err := syscall.Mkfifo(fifoName, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -207,7 +218,18 @@ func TestNewFileNonBlocking(t *testing.T) {
 }
 
 func TestFIFONonBlockingEOF(t *testing.T) {
-	fifoName := filepath.Join(t.TempDir(), "issue-66239-fifo")
+	var dir string
+	if runtime.GOOS == "sylixos" {
+		dir = "/dev/pipe"
+	} else {
+		dir = t.TempDir()
+	}
+
+	fifoName := filepath.Join(dir, "issue-66239-fifo")
+	if runtime.GOOS == "sylixos" {
+		defer os.Remove(fifoName)
+	}
+
 	if err := syscall.Mkfifo(fifoName, 0600); err != nil {
 		t.Fatalf("Error creating fifo: %v", err)
 	}

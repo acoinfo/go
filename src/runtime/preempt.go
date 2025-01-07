@@ -220,7 +220,7 @@ func suspendG(gp *g) suspendGState {
 			// because preemptM may be synchronous and we
 			// don't want to catch the G just spinning on
 			// its status.
-			if preemptMSupported && debug.asyncpreemptoff == 0 && needAsync {
+			if preemptMSupported && GOOS != "sylixos" && debug.asyncpreemptoff == 0 && needAsync {
 				// Rate limit preemptM calls. This is
 				// particularly important on Windows
 				// where preemptM is actually

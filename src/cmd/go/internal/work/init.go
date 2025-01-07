@@ -234,7 +234,7 @@ func buildModeInit() {
 					codegenArg = "-shared"
 				}
 
-			case "dragonfly", "freebsd", "illumos", "linux", "netbsd", "openbsd", "solaris":
+			case "dragonfly", "freebsd", "illumos", "linux", "netbsd", "openbsd", "solaris", "sylixos":
 				// Use -shared so that the result is
 				// suitable for inclusion in a PIE or
 				// shared library.
@@ -249,7 +249,7 @@ func buildModeInit() {
 			codegenArg = "-fPIC"
 		} else {
 			switch cfg.Goos {
-			case "linux", "android", "freebsd":
+			case "linux", "android", "freebsd", "sylixos":
 				codegenArg = "-shared"
 			case "windows":
 				// Do not add usual .exe suffix to the .dll file.
@@ -261,7 +261,7 @@ func buildModeInit() {
 		ldBuildmode = "exe"
 		if platform.DefaultPIE(cfg.Goos, cfg.Goarch, cfg.BuildRace) {
 			ldBuildmode = "pie"
-			if cfg.Goos != "windows" && !gccgo {
+			if cfg.Goos != "windows" && !gccgo && cfg.Goos != "sylixos" {
 				codegenArg = "-shared"
 			}
 		}

@@ -367,7 +367,7 @@ func TestPreemptionGC(t *testing.T) {
 }
 
 func TestAsyncPreempt(t *testing.T) {
-	if !runtime.PreemptMSupported {
+	if !runtime.PreemptMSupported || runtime.GOOS == "sylixos" {
 		t.Skip("asynchronous preemption not supported on this platform")
 	}
 	output := runTestProg(t, "testprog", "AsyncPreempt")
