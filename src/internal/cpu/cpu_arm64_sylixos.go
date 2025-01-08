@@ -9,6 +9,7 @@ package cpu
 func osInit() {
 	// Retrieve info from system register ID_AA64ISAR0_EL1.
 	isar0 := getisar0()
+	pfr0 := getpfr0()
 
-	parseARM64SystemRegisters(isar0)
+	parseARM64SystemRegisters(isar0, pfr0)
 }

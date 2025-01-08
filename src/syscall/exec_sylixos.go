@@ -110,3 +110,8 @@ func forkAndExecInChild(argv0 *byte, argv, envv []*byte, chroot, dir *byte, attr
 
 	return
 }
+
+// forkAndExecFailureCleanup cleans up after an exec failure.
+func forkAndExecFailureCleanup(attr *ProcAttr, sys *SysProcAttr) {
+	// Nothing to do.
+}
