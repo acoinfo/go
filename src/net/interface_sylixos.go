@@ -187,7 +187,17 @@ func ifiAddrTable(name string, index int) ([]Addr, error) {
 	}
 
 	sa = (*syscall.RawSockaddrInet4)(unsafe.Pointer(&req.Ifru))
-	ifat = append(ifat, &IPAddr{IP: IPv4(sa.Addr[0], sa.Addr[1], sa.Addr[2], sa.Addr[3])})
+	ipv4Addr := IPv4(sa.Addr[0], sa.Addr[1], sa.Addr[2], sa.Addr[3])
+
+	err = ioctlIfreq(sock, syscall.SIOCGIFNETMASK, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	maskSa := (*syscall.RawSockaddrInet4)(unsafe.Pointer(&req.Ifru))
+	ipv4Mask := IPv4Mask(maskSa.Addr[0], maskSa.Addr[1], maskSa.Addr[2], maskSa.Addr[3])
+
+	ifat = append(ifat, &IPNet{IP: ipv4Addr, Mask: ipv4Mask})
 
 	var (
 		req6  In6Ifreq
