@@ -201,10 +201,9 @@ func sigaltstack(new *stackt, old *stackt) {
 }
 func sigaltstack_trampoline()
 
-// Not used on OpenBSD, but must be defined.
+// Not used on SylixOS, but must be defined.
 func exitThread(wait *atomic.Uint32) {
-	(*wait).Store(0)
-	return //ACOINFO TODO
+	throw("exitThread")
 }
 
 //go:nosplit

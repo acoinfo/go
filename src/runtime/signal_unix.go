@@ -447,7 +447,7 @@ func sigtrampgo(sig uint32, info *siginfo, ctx unsafe.Pointer) {
 			}
 			return
 		}
-		if sig == sigPreempt && preemptMSupported && debug.asyncpreemptoff == 0 {
+		if sig == sigPreempt && preemptMSupported && GOOS != "sylixos" && debug.asyncpreemptoff == 0 {
 			// This is probably a signal from preemptM sent
 			// while executing Go code but received while
 			// executing non-Go code.
@@ -1391,7 +1391,7 @@ func blockableSig(sig uint32) bool {
 	if flags&_SigUnblock != 0 {
 		return false
 	}
-	if sig == sigPreempt && preemptMSupported && debug.asyncpreemptoff == 0 {
+	if sig == sigPreempt && preemptMSupported && GOOS != "sylixos" && debug.asyncpreemptoff == 0 {
 		return false
 	}
 	if isarchive || islibrary {
