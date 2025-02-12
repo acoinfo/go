@@ -244,6 +244,11 @@ TEXT runtime·exit_trampoline(SB),NOSPLIT,$0
 	POPQ	BP
 	RET
 
+TEXT runtime·pthread_exit_trampoline(SB),NOSPLIT,$0
+	CALL	libc_pthread_exit(SB)
+	MOVL	$0xf1, 0xf1  // crash
+	JMP	0(PC)
+
 TEXT runtime·raiseproc_trampoline(SB),NOSPLIT,$0
 	PUSHQ	BP
 	MOVQ	SP, BP

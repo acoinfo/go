@@ -201,10 +201,16 @@ func sigaltstack(new *stackt, old *stackt) {
 }
 func sigaltstack_trampoline()
 
-// Not used on SylixOS, but must be defined.
+// We should call pthread_exit() to release this thread.
+//
+//go:nosplit
+//go:cgo_unsafe_args
 func exitThread(wait *atomic.Uint32) {
-	throw("exitThread")
+	(*wait).Store(0)
+	libcCall(unsafe.Pointer(abi.FuncPCABI0(pthread_exit_trampoline)), unsafe.Pointer(&wait))
 }
+
+func pthread_exit_trampoline()
 
 //go:nosplit
 func CloseOnExec(fd int32) {
@@ -249,6 +255,7 @@ func issetugid_trampoline()
 
 //go:cgo_import_dynamic libc_errno __errno "libvpmpdm.so"
 //go:cgo_import_dynamic libc_exit exit "libvpmpdm.so"
+//go:cgo_import_dynamic libc_pthread_exit pthread_exit "libvpmpdm.so"
 //go:cgo_import_dynamic libc_sched_yield sched_yield "libvpmpdm.so"
 
 //go:cgo_import_dynamic libc_mmap mmap "libvpmpdm.so"

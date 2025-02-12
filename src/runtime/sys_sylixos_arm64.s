@@ -200,6 +200,11 @@ TEXT runtime·exit_trampoline(SB),NOSPLIT,$0
 	MOVD	R0, (R0)
 	RET
 
+TEXT runtime·pthread_exit_trampoline(SB),NOSPLIT,$0-8
+	CALL	libc_pthread_exit(SB)
+	SVC
+	JMP	0(PC)
+
 TEXT runtime·raiseproc_trampoline(SB),NOSPLIT,$0
 	MOVD	R0, R19			// pointer to args
 	CALL	libc_getpid(SB)		// arg 1 - pid
