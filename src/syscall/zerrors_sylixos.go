@@ -604,6 +604,10 @@ const (
 	PROT_WRITE                        = 0x2
 	PR_FASTHZ                         = 0x5
 	PR_SLOWHZ                         = 0x2
+	REBOOT_FORCE                      = -0x1
+	REBOOT_WARM                       = 0x0
+	REBOOT_COLD                       = 0x1
+	REBOOT_SHUTDOWN                   = 0x2
 	RLIMIT_AS                         = 0x9
 	RLIMIT_CORE                       = 0x4
 	RLIMIT_CPU                        = 0x0
