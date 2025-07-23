@@ -14,12 +14,13 @@ import (
 // which prevents us from allocating more stack.
 //
 //go:nosplit
-func sysAllocOS(n uintptr) unsafe.Pointer {
-	v, err := mmap(nil, n, _PROT_READ|_PROT_WRITE, _MAP_ANON|_MAP_PRIVATE, -1, 0)
+func sysAllocOS(n uintptr, vmaName string) unsafe.Pointer {
+	p, err := mmap(nil, n, _PROT_READ|_PROT_WRITE, _MAP_ANON|_MAP_PRIVATE, -1, 0)
 	if err != 0 {
 		return nil
 	}
-	return v
+	setVMAName(p, n, vmaName)
+	return p
 }
 
 func sysUnusedOS(v unsafe.Pointer, n uintptr) {
@@ -45,7 +46,7 @@ func sysFaultOS(v unsafe.Pointer, n uintptr) {
 	mmap(v, n, _PROT_NONE, _MAP_ANON|_MAP_PRIVATE|_MAP_FIXED, -1, 0)
 }
 
-func sysReserveOS(v unsafe.Pointer, n uintptr) unsafe.Pointer {
+func sysReserveOS(v unsafe.Pointer, n uintptr, vmaName string) unsafe.Pointer {
 	p, err := mmap(v, n, _PROT_NONE, _MAP_ANON|_MAP_PRIVATE, -1, 0)
 	// On sylixos, when mmap anon|private with prot_none returns 0xc,
 	// it means no virts mem space left on sylixos VMM.
@@ -55,10 +56,11 @@ func sysReserveOS(v unsafe.Pointer, n uintptr) unsafe.Pointer {
 	if err != 0 {
 		return nil
 	}
+	setVMAName(p, n, vmaName)
 	return p
 }
 
-func sysMapOS(v unsafe.Pointer, n uintptr) {
+func sysMapOS(v unsafe.Pointer, n uintptr, vmaName string) {
 	p, err := mmap(v, n, _PROT_READ|_PROT_WRITE, _MAP_ANON|_MAP_FIXED|_MAP_PRIVATE, -1, 0)
 	if err == _ENOMEM {
 		throw("runtime: out of memory")
@@ -67,6 +69,7 @@ func sysMapOS(v unsafe.Pointer, n uintptr) {
 		print("runtime: mmap(", v, ", ", n, ") returned ", p, ", ", err, "\n")
 		throw("runtime: cannot map pages in arena address space")
 	}
+	setVMAName(p, n, vmaName)
 }
 
 func sysNoHugePageOS(v unsafe.Pointer, n uintptr) {
