@@ -645,6 +645,10 @@ func Munmap(b []byte) (err error) {
 	return mapper.Munmap(b)
 }
 
+func Reboot(mode int) (err error) {
+	return API_KernelReboot(mode)
+}
+
 // Implemented in the runtime package (runtime/sys_sylixos3.go)
 func syscall(fn, a1, a2, a3 uintptr) (r1, r2 uintptr, err Errno)
 func syscallX(fn, a1, a2, a3 uintptr) (r1, r2 uintptr, err Errno)
