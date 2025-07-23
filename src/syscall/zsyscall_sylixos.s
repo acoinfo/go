@@ -232,4 +232,5 @@ TEXT ·libc_API_IosFdSetCloExec_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_API_IosFdSetCloExec(SB)
 TEXT ·libc_posix_spawn_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_posix_spawn(SB)
-
+TEXT ·libc_API_KernelReboot_trampoline(SB),NOSPLIT,$0-0
+	JMP	libc_API_KernelReboot(SB)
