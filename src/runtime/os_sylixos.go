@@ -120,10 +120,14 @@ func futexwakeup(addr *uint32, cnt uint32) {
 	API_VutexPostEx(addr, *addr, _LW_OPTION_VUTEX_FLAG_DONTSET|_LW_OPTION_VUTEX_FLAG_DEEPWAKE)
 }
 
+func getCPUCount() int32 {
+	return sysconf(__SC_NPROCESSORS_ONLN)
+}
+
 func osinit() {
 	vprocExitModeSet(_LW_VPROC_EXIT_FORCE)
 
-	ncpu = sysconf(__SC_NPROCESSORS_ONLN)
+	numCPUStartup = getCPUCount()
 	physPageSize = uintptr(sysconf(__SC_PAGE_SIZE))
 }
 
