@@ -76,6 +76,18 @@ func main() {
 		if strings.Contains(out, "i386") {
 			gohostarch = "386"
 		}
+	case "sylixos":
+		// "uname -m" reports the machine hardware name on SylixOS; e.g.,
+		// "RK3568 (ARMv8-A, 4 Cores: 4x cortex-a55 @ 1800MHZ)", which not equal to "arm64".
+		// So we use "uname -i" to get the native (arch) set on the running kernel:
+		// "arm64-generic", "x86-64", etc.
+		out := run("", CheckExit, "uname", "-i")
+		if strings.Contains(out, "arm64") {
+			gohostarch = "arm64"
+		}
+		if strings.Contains(out, "x86-64") {
+			gohostarch = "amd64"
+		}
 	case "windows":
 		exe = ".exe"
 	}
