@@ -54,14 +54,18 @@ export GOROOT_BOOTSTRAP="/path/to/bootstrap/go"
 export CGO_CFLAGS="-I$SDK/libsylixos/SylixOS -I$SDK/libsylixos/SylixOS/include -fno-exceptions -fPIC"
 ./make.bash        # Linux/Mac: make.bash | Windows: make.bat
 
-# B. Cross-compile
+# B. Build C stub library
 cd ../cgo-test
+aarch64-sylixos-elf-gcc -shared -fPIC -o libgolib.so golib.c \
+    -I$SDK/libsylixos/SylixOS -I$SDK/libsylixos/SylixOS/include
+
+# C. Cross-compile
 export GOOS="sylixos" GOARCH="arm64" CGO_ENABLED="1"
 export CC="/path/to/aarch64-sylixos-elf-gcc"
 export CGO_LDFLAGS="-shared -L$SDK/libsylixos/Release -L$SDK/libcextern/Release -L. -lcextern -lgolib"
 ../bin/go build -a -ldflags="-linkmode=external" -o myapp main_nc.go
 
-# C. Deploy (FTP → ADP)
+# D. Deploy (FTP → ADP)
 # Upload myapp + libgolib.so to /apps/, then telnet → ./myapp
 ```
 
