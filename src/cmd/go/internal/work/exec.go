@@ -2278,6 +2278,8 @@ func (b *Builder) compilerCmd(compiler []string, incdir, workdir string) []strin
 		switch cfg.Goos {
 		case "windows":
 			a = append(a, "-mthreads")
+		case "sylixos":
+			// SylixOS does not support -pthread
 		default:
 			a = append(a, "-pthread")
 		}

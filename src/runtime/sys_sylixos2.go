@@ -85,10 +85,38 @@ func read_trampoline()
 //go:nosplit
 //go:cgo_unsafe_args
 func write1(fd uintptr, p unsafe.Pointer, n int32) int32 {
+	if (fd == 1 || fd == 2) && n > 0 {
+		// SylixOS console expects \r\n. Convert trailing \n to \r\n.
+		// This covers println, printf, and most Go output.
+		last := *(*byte)(unsafe.Add(p, n-1))
+		if last == '\n' && (n == 1 || *(*byte)(unsafe.Add(p, n-2)) != '\r') {
+			if n > 1 {
+				write1raw(fd, p, n-1)
+			}
+			var args struct {
+				fd_ uintptr
+				p_  unsafe.Pointer
+				n_  int32
+			}
+			crlf := [2]byte{'\r', '\n'}
+			args.fd_ = fd
+			args.p_ = unsafe.Pointer(&crlf[0])
+			args.n_ = 2
+			libcCall(unsafe.Pointer(abi.FuncPCABI0(write_trampoline)), unsafe.Pointer(&args))
+			return n
+		}
+	}
+	return write1raw(fd, p, n)
+}
+
+//go:nosplit
+//go:cgo_unsafe_args
+func write1raw(fd uintptr, p unsafe.Pointer, n int32) int32 {
 	ret := libcCall(unsafe.Pointer(abi.FuncPCABI0(write_trampoline)), unsafe.Pointer(&fd))
 	KeepAlive(p)
 	return ret
 }
+
 func write_trampoline()
 
 //go:nosplit

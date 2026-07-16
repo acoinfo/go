@@ -90,6 +90,14 @@ func getGCMask(t *_type) *byte {
 		// Split the rest into getGCMaskOnDemand so getGCMask itself is inlineable.
 		return getGCMaskOnDemand(t)
 	}
+	// SylixOS external linker may corrupt GCData to a tiny value like 0x40.
+	if GOOS == "sylixos" {
+		gcdataVal := uintptr(unsafe.Pointer(t.GCData))
+		if gcdataVal != 0 && gcdataVal < 0x10000 {
+			t.TFlag |= abi.TFlagGCMaskOnDemand
+			return getGCMaskOnDemand(t)
+		}
+	}
 	return t.GCData
 }
 
@@ -108,6 +116,43 @@ func getGCMaskOnDemand(t *_type) *byte {
 	// TODO: we could use &t.GCData as the slot, but types are
 	// in read-only memory currently.
 	addr := unsafe.Pointer(t.GCData)
+
+	// SylixOS external linker may corrupt GCData pointer.
+	// If it points outside valid module range or is a tiny value,
+	// treat as nil so the mask is rebuilt from scratch.
+	if GOOS == "sylixos" {
+		gcdataVal := uintptr(addr)
+		if gcdataVal != 0 {
+			datap := &firstmoduledata
+			if gcdataVal < 0x10000 || gcdataVal > datap.end+0x200000 {
+				if t.PtrBytes == 0 || t.PtrBytes > t.Size_ || t.PtrBytes%goarch.PtrSize != 0 {
+					*(*uintptr)(unsafe.Pointer(&t.PtrBytes)) = t.Size_
+				}
+				addr = nil
+			}
+		}
+	}
+	if addr == nil {
+		ptrBytes := t.PtrBytes
+		if ptrBytes == 0 || ptrBytes > t.Size_ {
+			ptrBytes = t.Size_
+		}
+		nptr := divRoundUp(ptrBytes, goarch.PtrSize)
+		bytes := goarch.PtrSize * divRoundUp(nptr, 8*goarch.PtrSize)
+		if bytes == 0 {
+			bytes = goarch.PtrSize
+		}
+		p := (*byte)(persistentalloc(bytes, goarch.PtrSize, &memstats.other_sys))
+		for i := uintptr(0); i < bytes; i++ {
+			*(*uint8)(add(unsafe.Pointer(p), i)) = 0xFF
+		}
+		if extra := nptr % 8; extra > 0 {
+			*(*uint8)(add(unsafe.Pointer(p), nptr/8)) &^= 0xFF << extra
+		}
+		atomic.StorepNoWB(unsafe.Pointer(&t.GCData), unsafe.Pointer(p))
+		t.TFlag &^= abi.TFlagGCMaskOnDemand
+		return p
+	}
 
 	if GOOS == "aix" {
 		addr = add(addr, firstmoduledata.data-aixStaticDataBase)

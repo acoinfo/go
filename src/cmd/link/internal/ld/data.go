@@ -372,6 +372,12 @@ func (st *relocSymState) relocsym(s loader.Sym, P []byte) {
 					if target.IsAMD64() {
 						o = 0
 					}
+					if target.IsSylixos() {
+						// SylixOS BFD ld adds the implicit
+						// data addend on top of the RELA addend.
+						// Zero the data to avoid double counting.
+						o = 0
+					}
 				} else if target.IsDarwin() {
 					if ldr.SymType(s).IsDWARF() {
 						// We generally use symbol-targeted relocations.

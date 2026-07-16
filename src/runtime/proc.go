@@ -181,7 +181,9 @@ func main() {
 	// Those can arrange for main.main to run in the main thread
 	// by calling runtime.LockOSThread during initialization
 	// to preserve the lock.
-	lockOSThread()
+	if GOOS != "sylixos" {
+		lockOSThread()
+	}
 
 	if mp != &m0 {
 		throw("runtime.main not on m0")
@@ -204,7 +206,7 @@ func main() {
 	// Defer unlock so that runtime.Goexit during init does the unlock too.
 	needUnlock := true
 	defer func() {
-		if needUnlock {
+		if needUnlock && GOOS != "sylixos" {
 			unlockOSThread()
 		}
 	}()
@@ -263,7 +265,9 @@ func main() {
 	close(main_init_done)
 
 	needUnlock = false
-	unlockOSThread()
+	if GOOS != "sylixos" {
+		unlockOSThread()
+	}
 
 	if isarchive || islibrary {
 		// A program compiled with -buildmode=c-archive or c-shared
