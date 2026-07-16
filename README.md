@@ -1,95 +1,98 @@
 # Go for SylixOS — CGO Support Branch
 
-> **Branch**: `sylixos-cgo` | **Based on**: `sylixos-patch_on_go1.25` (go1.25.0)
-> **Status**: ✅ CGO cross-compilation to SylixOS ARM64 fully working
+> **Branch**: `sylixos-cgo` | **Base**: go1.25.0 (`sylixos-patch_on_go1.25`)
+> **Status**: ✅ Verified on RK3568 ADP, SylixOS 3.9.0
 > **Upstream**: https://github.com/acoinfo/go
 
 ---
 
-## What This Branch Does
+## Overview
 
-This branch adds **CGO support** to the SylixOS Go port. With these changes, Go programs calling C code can be cross-compiled and run on SylixOS ARM64 (verified on RK3568 ADP, SylixOS 3.9.0).
+Enables CGO cross-compilation (Go calling C) targeting SylixOS ARM64.
+8 source files modified, 175 lines added. All fixes in Go source — **no toolchain changes required**.
 
-## Modified Files (8 files, 175 lines added)
+## Modified Files
 
-| File | Change |
-|------|--------|
-| `src/cmd/link/internal/ld/data.go` | Zero embedded pointer data for SylixOS ELF — avoids BFD ld double-addend bug (+6) |
-| `src/runtime/proc.go` | Skip `lockOSThread`/`unlockOSThread` on SylixOS — prevents single-M deadlock (+10) |
-| `src/runtime/sys_sylixos2.go` | Auto LF→CRLF in `write1` for SylixOS console compatibility (+28) |
-| `src/runtime/chan.go` | Fix `makechan` corrupted `Size_`/`Align_` from external linker (+27) |
-| `src/runtime/symtab.go` | Fix ftab sentinel, loadBias 0x40000000000, typelinks/etypes repair (+60) |
-| `src/runtime/type.go` | Detect corrupted GCData/PtrBytes, rebuild GC mask at runtime (+45) |
-| `src/cmd/go/internal/work/exec.go` | Skip `-pthread` on SylixOS (+2) |
-| `src/os/user/lookup_sylixos.go` | Add `!cgo` build tag (+1) |
+| File | Problem | Fix |
+|------|---------|-----|
+| `src/cmd/link/internal/ld/data.go` | BFD ld double-addend causes type pointers to point wrong addresses → SIGKILL | Zero embedded pointer data, let RELA addend handle offset alone |
+| `src/runtime/proc.go` | `lockOSThread()` + single-M = scheduler deadlock when main goroutine parks | Skip lock/unlockOSThread on SylixOS |
+| `src/runtime/sys_sylixos2.go` | SylixOS console needs CRLF, Go outputs LF only → output squashed into one line | Auto-convert trailing LF→CRLF in `write1` for stdout/stderr |
+| `src/runtime/chan.go` | External linker corrupts `chan` type metadata → `makechan` throw | Detect and repair corrupted Size_/Align_ at runtime |
+| `src/runtime/symtab.go` | Linker corrupts ftab sentinel, string tables, typelinks base | Runtime repair: ftab, loadBias (0x40000000000), typelinks/etypes |
+| `src/runtime/type.go` | Corrupted GCData pointer → GC scan dereferences invalid address → SIGKILL | Detect invalid GCData/PtrBytes, rebuild GC mask at runtime |
+| `src/cmd/go/internal/work/exec.go` | SylixOS has no `-pthread` | Skip pthread flag |
+| `src/os/user/lookup_sylixos.go` | CGO + os/user = circular dependency | Add `!cgo` build tag |
 
-All fixes in Go source. **No changes to SylixOS toolchain required.**
+## Quick Start
 
-## Two Core Problems Solved
+```bash
+# 1. Clone
+git clone https://github.com/kose0922/go.git -b sylixos-cgo
+cd go
 
-### 1. BFD ld Double-Addend → SIGKILL
-SylixOS BFD ld applies `R_AARCH64_ABS64` as `S + addend + *(data)` instead of standard `S + addend`. Type pointers in `moduledata` point to wrong addresses → crash.
+# 2. Edit build_sylixos_cgo.sh — set paths for your environment
+#    (GOROOT_BOOTSTRAP, SYLIXOS_SDK, SYLIXOS_GCC)
 
-**Fix** (`data.go`): Zero the data field, let RELA addend handle offset alone (same as AMD64).
+# 3. One-click build
+./build_sylixos_cgo.sh
+```
 
-### 2. Single-M Scheduler Deadlock
-`lockOSThread()` locks main goroutine to M0. When it parks in `gcenable()`, `stoplockedm()` tries to create a new M — but SylixOS is single-threaded — M0 sleeps forever.
-
-**Fix** (`proc.go`): Skip lockOSThread/unlockOSThread on SylixOS.
-
-## Build & Deploy
+## Manual Build
 
 ### Prerequisites
-- RealEvo-IDE running (GCC license server required)
-- Git Bash on Windows
-- Bootstrap Go (go1.24.5+ windows/amd64)
-- SylixOS GCC: `aarch64-sylixos-elf-gcc` (10.2.1)
+- Bootstrap Go 1.24+ (any platform)
+- `aarch64-sylixos-elf-gcc` 10.2.1 (RealEvo toolchain)
+- SylixOS SDK (libsylixos, libcextern)
 
-### Step A: Build Go Compiler
+### Steps
+
 ```bash
+# A. Build Go compiler
 cd src
-export GOROOT_BOOTSTRAP="/c/Users/taoran/go"
-export CGO_CFLAGS="-I<SDK>/libsylixos/SylixOS -I<SDK>/libsylixos/SylixOS/include -fno-exceptions -fPIC"
-./make.bat
-```
-> Only needed when `src/cmd/link/*` is modified. `src/runtime/*` changes don't require rebuild.
+export GOROOT_BOOTSTRAP="/path/to/bootstrap/go"
+export CGO_CFLAGS="-I$SDK/libsylixos/SylixOS -I$SDK/libsylixos/SylixOS/include -fno-exceptions -fPIC"
+./make.bash        # Linux/Mac: make.bash | Windows: make.bat
 
-### Step B: Build C Stub Library
-```bash
-cd cgo-test
-aarch64-sylixos-elf-gcc -shared -fPIC -o libgolib.so golib.c
-```
-
-### Step C: Cross-Compile
-```bash
-cd cgo-test
+# B. Cross-compile
+cd ../cgo-test
 export GOOS="sylixos" GOARCH="arm64" CGO_ENABLED="1"
-export CC="<path>/aarch64-sylixos-elf-gcc.exe"
-export CGO_LDFLAGS="-shared -L<SDK>/libsylixos/Release -L<SDK>/libcextern/Release -L. -lcextern -lvpmpdm -lfastlock -lgolib"
-go build -a -ldflags="-linkmode=external" -o main_nc main_nc.go
+export CC="/path/to/aarch64-sylixos-elf-gcc"
+export CGO_LDFLAGS="-shared -L$SDK/libsylixos/Release -L$SDK/libcextern/Release -L. -lcextern -lgolib"
+../bin/go build -a -ldflags="-linkmode=external" -o myapp main_nc.go
+
+# C. Deploy (FTP → ADP)
+# Upload myapp + libgolib.so to /apps/, then telnet → ./myapp
 ```
 
-### Step D: Deploy
-FTP upload `main_nc` and `libgolib.so` to ADP `/apps/`, then `telnet` → `./main_nc`.
+> **Note**: Modifying `src/runtime/*.go` does NOT require `make.bash`. Use `go build -a`. Only `src/cmd/link/*` changes need Step A.
 
-## Verification Output
+## Repository Structure
+
+```
+├── build_sylixos_cgo.sh     # One-click build script
+├── README.md
+├── src/                     # Full Go source (this branch == upstream + 8 modified files)
+├── cgo-test/
+│   ├── main_nc.go           # CGO test program
+│   ├── golib.c              # C stub
+│   ├── build.sh             # Test-only build
+│   └── linker_analysis/     # ELF relocation analysis tools (Python)
+```
+
+## Known Limitations
+
+- **Single-M only**: SylixOS Go runs on a single OS thread. CGO calls from multiple goroutines serialize on the C stack.
+- **External linker required**: `-ldflags="-linkmode=external"` is mandatory.
+- **Pre-built binary** (`cgo-test/main_nc_v17`) is for RK3568 only; rebuild for other boards.
+
+## Verification
 
 ```
 === SylixOS CGO Verification ===
 C.add( 3 , 5 ) = 8
 C.factorial( 7 ) = 5040
 Hello from Go->C!
-Go var x = 42 at addr 4399254765336
+Go var x = 42 at addr 0x...
 === ALL CGO TESTS PASSED ===
-```
-
-## Directory
-
-```
-cgo-test/
-├── main_nc.go          # CGO test (C.add, C.factorial, C.say)
-├── main_nc_v17         # Pre-built ADP binary (RK3568)
-├── golib.c / libgolib.so
-├── build.sh
-└── linker_analysis/    # ELF analysis scripts
 ```
