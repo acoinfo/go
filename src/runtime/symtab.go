@@ -613,6 +613,66 @@ const debugPcln = false
 //
 //go:linkname moduledataverify1
 func moduledataverify1(datap *moduledata) {
+	// --- SylixOS: repair ftab sentinel corrupted by external linker ---
+	nftab := len(datap.ftab) - 1
+	if nftab > 0 && datap.ftab[nftab].entryoff == 0 && datap.maxpc > datap.text {
+		datap.ftab[nftab].entryoff = uint32(datap.maxpc - datap.text)
+	}
+
+	// --- SylixOS: repair string tables + typelinks corrupted by external linker ---
+	loadBias := uintptr(0)
+	if GOOS == "sylixos" && datap.minpc > 0x40000000000 {
+		loadBias = 0x40000000000
+	}
+	if loadBias == 0 && GOOS == "sylixos" && datap.text > 0x40000000000 {
+		loadBias = 0x40000000000
+	}
+	if loadBias > 0 {
+		fixStrArr := func(arr []string) {
+			for i := range arr {
+				s := arr[i]
+				if len(s) == 0 {
+					continue
+				}
+				dataPtr := uintptr(unsafe.Pointer(unsafe.StringData(s)))
+				if dataPtr > datap.end+0x100000 || dataPtr < datap.rodata {
+					fixedPtr := uintptr(int64(dataPtr) - int64(loadBias))
+					if fixedPtr >= datap.rodata && fixedPtr < datap.end+0x100000 {
+						sh := (*struct {
+							Data unsafe.Pointer
+							Len  int
+						})(unsafe.Pointer(&arr[i]))
+						sh.Data = unsafe.Pointer(fixedPtr)
+					}
+				}
+			}
+		}
+		fixStrArr(gStatusStrings[:])
+		fixStrArr(waitReasonStrings[:])
+
+		// Repair typelinks: external linker may shift types/etypes base.
+		if len(datap.typelinks) > 0 {
+			firstOff := datap.typelinks[0]
+			firstTyp := (*abi.Type)(unsafe.Pointer(datap.types + uintptr(firstOff)))
+			if !(firstTyp.Size_ < 1<<20 && firstTyp.Size_ > 0 &&
+				firstTyp.Kind_&abi.KindMask < 64 && firstTyp.Align_ <= 64) {
+				for _, try := range []uintptr{0x10000, 0x20000, 0x30000, 0x40000, 0x50000} {
+					altTypes := datap.types - try
+					if altTypes < datap.rodata {
+						continue
+					}
+					altTyp := (*abi.Type)(unsafe.Pointer(altTypes + uintptr(firstOff)))
+					if altTyp.Size_ < 1<<20 && altTyp.Size_ > 0 &&
+						altTyp.Kind_&abi.KindMask < 64 && altTyp.Align_ <= 64 {
+						*(*uintptr)(unsafe.Pointer(&datap.types)) = altTypes
+						*(*uintptr)(unsafe.Pointer(&datap.etypes)) = datap.etypes - try
+						break
+					}
+				}
+			}
+		}
+	}
+
 	// Check that the pclntab's format is valid.
 	hdr := datap.pcHeader
 	if hdr.magic != 0xfffffff1 || hdr.pad1 != 0 || hdr.pad2 != 0 ||

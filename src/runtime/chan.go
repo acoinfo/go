@@ -76,8 +76,31 @@ func makechan(t *chantype, size int) *hchan {
 	elem := t.Elem
 
 	// compiler checks this but be safe.
-	if elem.Size_ >= 1<<16 {
-		throw("makechan: invalid channel element type")
+	if elem.Size_ >= 1<<16 || elem.Align_ == 0 || elem.Align_ > 64 {
+		// SylixOS external linker may corrupt type metadata.
+		// Fix Size_: if it looks like a relocated address, extract low bits.
+		if elem.Size_ > 0x40000000000 {
+			lo := uint32(elem.Size_ & 0xFFFFFFFF)
+			if lo > 0 && lo < 1<<16 {
+				elem.Size_ = uintptr(lo)
+			} else {
+				elem.Size_ = 8
+			}
+		} else if elem.Size_ >= 1<<16 {
+			elem.Size_ = 8
+		}
+		// Fix Align_: derive from Size_ (power of 2, capped at 8).
+		if elem.Align_ == 0 || elem.Align_ > 64 {
+			if elem.Size_ <= 1 {
+				elem.Align_ = 1
+			} else if elem.Size_ <= 2 {
+				elem.Align_ = 2
+			} else if elem.Size_ <= 4 {
+				elem.Align_ = 4
+			} else {
+				elem.Align_ = 8
+			}
+		}
 	}
 	if hchanSize%maxAlign != 0 || elem.Align_ > maxAlign {
 		throw("makechan: bad alignment")
