@@ -684,7 +684,7 @@ func moduledataverify1(datap *moduledata) {
 	}
 
 	// ftab is lookup table for function by program counter.
-	nftab := len(datap.ftab) - 1
+	nftab = len(datap.ftab) - 1
 	for i := 0; i < nftab; i++ {
 		// NOTE: ftab[nftab].entry is legal; it is the address beyond the final function.
 		if datap.ftab[i].entryoff > datap.ftab[i+1].entryoff {
