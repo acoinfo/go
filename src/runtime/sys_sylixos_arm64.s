@@ -13,6 +13,7 @@
 #include "go_asm.h"
 #include "go_tls.h"
 #include "textflag.h"
+#include "tls_arm64.h"
 #include "cgo/abi_arm64.h"
 
 #define CLOCK_REALTIME	$0
@@ -43,6 +44,19 @@ TEXT runtime·mstart_stub(SB),NOSPLIT,$160
 	// the value here doesn't really matter).
 	MOVD	$0, R0
 
+	RET
+
+// getTLSBase / setTLSBase: read and write the thread pointer (TPIDR_EL0).
+// Used to install a per-thread TLS area when the SylixOS loader left
+// TPIDR_EL0 == 0 (a process without a TLS segment).
+TEXT runtime·getTLSBase(SB),NOSPLIT,$0-8
+	MRS_TPIDR_R0
+	MOVD	R0, ret+0(FP)
+	RET
+
+TEXT runtime·setTLSBase(SB),NOSPLIT,$0-8
+	MOVD	base+0(FP), R0
+	MSR_TPIDR_R0
 	RET
 
 TEXT runtime·sigfwd(SB),NOSPLIT,$0-32

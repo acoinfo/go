@@ -46,6 +46,7 @@
 
 #ifdef GOOS_sylixos
 #define MRS_TPIDR_R0 WORD $0xd53bd040 // MRS TPIDR_EL0, R0
+#define MSR_TPIDR_R0 WORD $0xd51bd040 // MSR TPIDR_EL0, R0
 #endif
 
 // Define something that will break the build if

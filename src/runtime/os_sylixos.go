@@ -12,6 +12,28 @@ import (
 	"unsafe"
 )
 
+// getTLSBase / setTLSBase read and write the thread pointer (TPIDR_EL0).
+// SylixOS only installs TPIDR_EL0 for threads of a process with a TLS
+// segment (VP_stTlsSize > 0); a c-shared library dlopen'd into a plain C
+// process runs with TPIDR_EL0 == 0, so needm and the c-shared bootstrap
+// must install the m's own TLS area before save_g can persist g.
+//
+//go:nosplit
+func getTLSBase() uintptr
+
+//go:nosplit
+func setTLSBase(uintptr)
+
+// osSetupTLS is called by needm for a C thread entering Go. On SylixOS it
+// installs a per-thread TLS area when the loader left TPIDR_EL0 == 0.
+//
+//go:nosplit
+func osSetupTLS(mp *m) {
+	if getTLSBase() == 0 {
+		setTLSBase(uintptr(unsafe.Pointer(&mp.tls)))
+	}
+}
+
 type mOS struct {
 	waitsema uintptr // semaphore for parking on locks
 }
@@ -171,6 +193,46 @@ func newosproc(mp *m) {
 	}
 
 	pthread_attr_destroy(&attr)
+}
+
+// libpreinit is called synchronously when a library built with
+// -buildmode=c-shared is loaded (from _rt0_arm64_sylixos_lib), before the
+// runtime init thread is started. Matches the other Unix ports.
+//
+//go:nosplit
+//go:nowritebarrierrec
+func libpreinit() {
+	initsig(true)
+}
+
+// Version of newosproc that doesn't require a valid G. It is used by
+// _rt0_arm64_sylixos_lib to start the runtime init thread of a dlopen'd
+// shared library. SylixOS has no clone(2); create a detached pthread on a
+// freshly allocated 1MB stack, mirroring newosproc.
+//
+//go:nosplit
+func newosproc0(stacksize uintptr, fn unsafe.Pointer) {
+	stack := sysAlloc(stacksize, &memstats.stacks_sys, "OS thread stack")
+	if stack == nil {
+		writeErrStr(failallocatestack)
+		exit(1)
+	}
+	var attr pthreadattr
+	if pthread_attr_init(&attr) != 0 {
+		throw("pthread_attr_init")
+	}
+	if pthread_attr_setstack(&attr, stack, stacksize) != 0 {
+		throw("pthread_attr_setstack")
+	}
+	if pthread_attr_setdetachstate(&attr, _PTHREAD_CREATE_DETACHED) != 0 {
+		throw("pthread_attr_setdetachstate")
+	}
+	ret := retryOnEAGAIN(func() int32 { return pthread_create(&attr, uintptr(fn), nil) })
+	pthread_attr_destroy(&attr)
+	if ret != 0 {
+		writeErrStr(failthreadcreate)
+		exit(1)
+	}
 }
 
 //go:nosplit
