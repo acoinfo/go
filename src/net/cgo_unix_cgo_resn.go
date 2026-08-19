@@ -4,7 +4,7 @@
 
 // res_nsearch, for cgo systems where that's available.
 
-//go:build cgo && !netgo && unix && !(darwin || linux || openbsd)
+//go:build cgo && !netgo && unix && !(darwin || linux || openbsd || sylixos)
 
 package net
 
