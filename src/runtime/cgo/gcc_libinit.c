@@ -43,6 +43,18 @@ x_cgo_sys_thread_create(void* (*func)(void*), void* arg) {
 
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+#ifdef GOOS_sylixos
+	// SylixOS default thread stack may be small (see gcc_sylixos_arm64.c).
+	// Give the c-shared runtime-init thread the same 1MB stack used for
+	// every other Go-created thread so the runtime bootstrap (schedinit,
+	// package inits, GC setup) cannot overflow the real stack.
+	{
+		size_t size = 1 << 20; // 1MB
+		if (pthread_attr_setstacksize(&attr, size) != 0) {
+			pthread_attr_getstacksize(&attr, &size);
+		}
+	}
+#endif
 	err = _cgo_try_pthread_create(&p, &attr, func, arg);
 	if (err != 0) {
 		fprintf(stderr, "pthread_create failed: %s", strerror(err));
