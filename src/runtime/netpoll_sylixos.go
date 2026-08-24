@@ -79,12 +79,18 @@ func netpollclose(fd uintptr) int32 {
 
 	for i := 0; i < len(pfds); i++ {
 		if pfds[i].fd == int32(fd) {
-			pfds[i] = pfds[len(pfds)-1]
-			pfds = pfds[:len(pfds)-1]
-
-			pds[i] = pds[len(pds)-1]
-			pds[i].user = uint32(i)
-			pds = pds[:len(pds)-1]
+			last := len(pfds) - 1
+			if i != last {
+				// Move the last element into slot i, keeping pfds and
+				// pds in lock-step, and fix up the moved pd's index.
+				pfds[i] = pfds[last]
+				pds[i] = pds[last]
+				if pds[i] != nil {
+					pds[i].user = uint32(i)
+				}
+			}
+			pfds = pfds[:last]
+			pds = pds[:last]
 			break
 		}
 	}
@@ -98,6 +104,31 @@ func netpollarm(pd *pollDesc, mode int) {
 
 	lock(&mtxset)
 	unlock(&mtxpoll)
+
+	// Guard against stale pd.user index: if this pd's fd was closed
+	// (netpollclose) without this arm being cancelled, pd.user may be
+	// out of range or point at a different fd. Never index out of
+	// bounds -- fall back to scanning for our fd, and bail out if the
+	// fd is no longer registered.
+	if int(pd.user) >= len(pfds) {
+		unlock(&mtxset)
+		return
+	}
+	// If the slot at pd.user is not our fd, resync by scanning.
+	if pfds[pd.user].fd != int32(pd.fd) {
+		idx := -1
+		for i := 1; i < len(pfds); i++ {
+			if pfds[i].fd == int32(pd.fd) {
+				idx = i
+				break
+			}
+		}
+		if idx < 0 {
+			unlock(&mtxset)
+			return
+		}
+		pd.user = uint32(idx)
+	}
 
 	switch mode {
 	case 'r':
@@ -191,6 +222,13 @@ retry:
 			pfd.events &= ^_POLLOUT
 		}
 		if mode != 0 {
+			if pds[i] == nil {
+				// pds[i] should always be non-nil for i>0, but guard
+				// against a stale/unsynchronized array to avoid a
+				// nil-pointer crash.
+				n--
+				continue
+			}
 			pds[i].setEventErr(pfd.revents == _POLLERR, 0)
 			delta += netpollready(&toRun, pds[i], mode)
 			n--

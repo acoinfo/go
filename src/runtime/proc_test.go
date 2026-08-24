@@ -367,8 +367,17 @@ func TestPreemptionGC(t *testing.T) {
 }
 
 func TestAsyncPreempt(t *testing.T) {
-	if !runtime.PreemptMSupported || runtime.GOOS == "sylixos" {
+	if !runtime.PreemptMSupported {
 		t.Skip("asynchronous preemption not supported on this platform")
+	}
+	// SylixOS: async preemption IS supported (preemptMSupported == true and
+	// sigPreempt delivery works), but this test spawns the auxiliary testprog
+	// child via runTestProg, and SylixOS multi-child spawning crashes (see
+	// Test18146: the second child onward faults at boot). The scheduler/GC on
+	// the device exercise async preemption continuously, so the feature is
+	// covered indirectly; the dedicated test cannot run here.
+	if runtime.GOOS == "sylixos" {
+		t.Skip("skipping on sylixos: test requires spawning the testprog child, affected by the multi-child boot crash (Test18146)")
 	}
 	output := runTestProg(t, "testprog", "AsyncPreempt")
 	want := "OK\n"

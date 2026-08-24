@@ -6504,7 +6504,7 @@ func preemptone(pp *p) bool {
 	gp.stackguard0 = stackPreempt
 
 	// Request an async preemption of this P.
-	if preemptMSupported && GOOS != "sylixos" && debug.asyncpreemptoff == 0 {
+	if preemptMSupported && debug.asyncpreemptoff == 0 {
 		pp.preempt = true
 		preemptM(mp)
 	}

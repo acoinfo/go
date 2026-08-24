@@ -7,8 +7,10 @@
 package cgotest
 
 /*
-#cgo CFLAGS: -pthread
-#cgo LDFLAGS: -pthread
+// SylixOS: pthread is native, and the SylixOS GCC rejects -pthread, so the
+// flag only applies to platforms that need it.
+#cgo !sylixos CFLAGS: -pthread
+#cgo !sylixos LDFLAGS: -pthread
 extern int RunSigThread();
 extern int CheckBlocked();
 */

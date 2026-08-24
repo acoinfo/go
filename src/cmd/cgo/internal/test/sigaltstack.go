@@ -62,7 +62,9 @@ import (
 
 func testSigaltstack(t *testing.T) {
 	switch {
-	case runtime.GOOS == "solaris", runtime.GOOS == "illumos", runtime.GOOS == "ios" && runtime.GOARCH == "arm64":
+	case runtime.GOOS == "solaris", runtime.GOOS == "illumos",
+		runtime.GOOS == "sylixos", // sigaltstack EINVAL on SylixOS
+		runtime.GOOS == "ios" && runtime.GOARCH == "arm64":
 		t.Skipf("switching signal stack not implemented on %s/%s", runtime.GOOS, runtime.GOARCH)
 	}
 

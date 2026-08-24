@@ -33,6 +33,14 @@ func test18146(t *testing.T) {
 		t.Skipf("skipping on %s", runtime.GOARCH)
 	}
 
+	// SylixOS: spawning more than one child process crashes — every child
+	// after the first faults in x_cgo_init (kernel __vmmCtxGlobalPgdUpdate
+	// path), and the loader mis-reads the binary's FPU type. Not fixable in
+	// Go source; reported for SylixOS-side investigation.
+	if runtime.GOOS == "sylixos" {
+		t.Skip("skipping on sylixos: multiple child-process boots crash")
+	}
+
 	attempts := 1000
 	threads := 4
 

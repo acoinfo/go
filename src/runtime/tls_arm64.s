@@ -21,6 +21,13 @@ TEXT runtime·load_g(SB),NOSPLIT,$0
 #endif
 
 	MRS_TPIDR_R0
+#ifdef GOOS_sylixos
+	// SylixOS only installs TPIDR_EL0 for threads of a process with a TLS
+	// segment (VP_stTlsSize > 0). A c-shared library loaded into a plain C
+	// process runs with TPIDR_EL0 == 0: report g == 0 so the caller treats
+	// the thread as foreign and establishes TLS via needm/osSetupTLS.
+	CBZ	R0, zerotls
+#endif
 #ifdef TLS_darwin
 #ifdef GOOS_sylixos
 	// Darwin sometimes returns unaligned pointers
@@ -31,6 +38,13 @@ TEXT runtime·load_g(SB),NOSPLIT,$0
 	MOVD	runtime·tls_g(SB), R27
 	MOVD	(R0)(R27), g
 
+#ifdef GOOS_sylixos
+	// Do not fall through into zerotls: the TPIDR_EL0 != 0 path already
+	// loaded g from TLS above.
+	B	nocgo
+zerotls:
+	MOVD	ZR, g
+#endif
 nocgo:
 	RET
 
@@ -47,6 +61,12 @@ TEXT runtime·save_g(SB),NOSPLIT,$0
 #endif
 
 	MRS_TPIDR_R0
+#ifdef GOOS_sylixos
+	// See load_g: with TPIDR_EL0 == 0 there is nowhere to persist g; skip
+	// the store. The caller must establish TLS (osSetupTLS / the c-shared
+	// lib entry / setg_gcc) before save_g can take effect.
+	CBZ	R0, zerotls
+#endif
 #ifdef TLS_darwin
 #ifdef GOOS_sylixos
 	// Darwin sometimes returns unaligned pointers
@@ -57,6 +77,9 @@ TEXT runtime·save_g(SB),NOSPLIT,$0
 	MOVD	runtime·tls_g(SB), R27
 	MOVD	g, (R0)(R27)
 
+#ifdef GOOS_sylixos
+zerotls:
+#endif
 nocgo:
 	RET
 

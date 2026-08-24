@@ -1277,6 +1277,17 @@ TEXT runtime·setg(SB), NOSPLIT, $0-8
 TEXT setg_gcc<>(SB),NOSPLIT,$8
 	MOVD	R0, g
 	MOVD	R27, savedR27-8(SP)
+#ifdef GOOS_sylixos
+	// See load_g: on SylixOS the thread pointer (TPIDR_EL0) may be 0 for a
+	// process without a TLS segment. Point it at this g's m TLS area
+	// before save_g so load_g can later find g on this thread.
+	MRS_TPIDR_R0
+	CBNZ	R0, have_tls
+	MOVD	g_m(g), R27
+	ADD	$m_tls, R27, R0
+	MSR_TPIDR_R0
+have_tls:
+#endif
 	BL	runtime·save_g(SB)
 	MOVD	savedR27-8(SP), R27
 	RET
