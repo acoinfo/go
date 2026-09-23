@@ -260,6 +260,15 @@ TEXT runtime·munmap_trampoline(SB),NOSPLIT,$0
 	MOVD	R0, (R0)
 	RET
 
+TEXT runtime·mprotect_trampoline(SB),NOSPLIT,$0
+	MOVD	R0, R19			// pointer to args
+	MOVD	0(R19), R0		// arg 1 - addr
+	MOVD	8(R19), R1		// arg 2 - len
+	MOVW	16(R19), R2		// arg 3 - prot
+	CALL	libc_mprotect(SB)
+	MOVW	R0, 20(R19)		// ret
+	RET
+
 TEXT runtime·open_trampoline(SB),NOSPLIT,$0
 	MOVW	8(R0), R1		// arg 2 - flags
 	MOVW	12(R0), R2		// arg 3 - mode
