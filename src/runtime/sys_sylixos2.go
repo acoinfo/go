@@ -57,6 +57,25 @@ func munmap(addr unsafe.Pointer, n uintptr) {
 }
 func munmap_trampoline()
 
+// mprotect changes the access protection of an existing mapping. Unlike
+// mmap with MAP_FIXED it does not discard the range's contents, which is what
+// makes it usable from sysUsedOS (whose range may still contain live data).
+//
+//go:nosplit
+//go:cgo_unsafe_args
+func mprotect(addr unsafe.Pointer, n uintptr, prot int32) int32 {
+	args := struct {
+		addr unsafe.Pointer
+		n    uintptr
+		prot int32
+		ret  int32
+	}{addr, n, prot, 0}
+	libcCall(unsafe.Pointer(abi.FuncPCABI0(mprotect_trampoline)), unsafe.Pointer(&args))
+	KeepAlive(addr) // Just for consistency. Hopefully addr is not a Go address.
+	return args.ret
+}
+func mprotect_trampoline()
+
 //go:nosplit
 //go:cgo_unsafe_args
 func open(name *byte, mode, perm int32) (ret int32) {
@@ -287,6 +306,7 @@ func issetugid_trampoline()
 //go:cgo_import_dynamic libc_sched_yield sched_yield "libvpmpdm.so"
 
 //go:cgo_import_dynamic libc_mmap mmap "libvpmpdm.so"
+//go:cgo_import_dynamic libc_mprotect mprotect "libvpmpdm.so"
 //go:cgo_import_dynamic libc_munmap munmap "libvpmpdm.so"
 
 //go:cgo_import_dynamic libc_open open "libvpmpdm.so"
