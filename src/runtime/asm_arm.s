@@ -695,6 +695,28 @@ loadg:
 	B.EQ	needm
 
 	MOVW	g_m(g), R8
+#ifdef GOOS_sylixos
+	// SylixOS/ARM32 does not install a thread pointer for the process, so
+	// load_g cannot recover g on a thread created by C. Such a thread may
+	// have a garbage g register; validate g->m and fall back to needm.
+	MOVW	$-1, R12
+	CMP	R12, R8
+	B.EQ	cgocallback_badg
+	CMP	$0, R8
+	B.EQ	cgocallback_badg
+	MOVW	R8, R12
+	BIC	$7, R12
+	CMP	R12, R8
+	B.NE	cgocallback_badg
+	MOVW	m_g0(R8), R3
+	CMP	$0, R3
+	B.EQ	cgocallback_badg
+	B	cgocallback_goodg
+cgocallback_badg:
+	MOVW	$0, g
+	B	needm
+cgocallback_goodg:
+#endif
 	MOVW	R8, savedm-4(SP)
 	B	havem
 
