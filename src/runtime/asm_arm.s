@@ -713,6 +713,31 @@ loadg:
 	B.EQ	cgocallback_badg
 	B	cgocallback_goodg
 cgocallback_badg:
+	// Try the g bound to this pthread by a previous needm. On SylixOS/ARM32
+	// the g register may be clobbered by C code between callbacks, so the
+	// pthread key is the only place to recover the borrowed m.
+	MOVW	runtime·cgoGetThreadGFn(SB), R3
+	CMP	$0, R3
+	BEQ	cgocallback_needm
+	BL	(R3)
+	MOVW	R0, g
+	CMP	$0, g
+	BEQ	cgocallback_needm
+	MOVW	g_m(g), R8
+	CMP	$0, R8
+	BEQ	cgocallback_needm
+	MOVW	$-1, R3
+	CMP	R3, R8
+	BEQ	cgocallback_needm
+	MOVW	R8, R3
+	BIC	$7, R3
+	CMP	R3, R8
+	BNE	cgocallback_needm
+	MOVW	m_g0(R8), R3
+	CMP	$0, R3
+	BEQ	cgocallback_needm
+	B	cgocallback_goodg
+cgocallback_needm:
 	MOVW	$0, g
 	B	needm
 cgocallback_goodg:

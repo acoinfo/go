@@ -2697,6 +2697,8 @@ func cgoBindM() {
 	if _cgo_bindm != nil {
 		asmcgocall(_cgo_bindm, unsafe.Pointer(g))
 	}
+	// Keep the pthread-key getter reachable for the arm32 assembly path.
+	_ = cgoGetThreadGFn
 }
 
 // A helper function for EnsureDropM.

@@ -19,6 +19,7 @@ import "unsafe"
 //go:linkname _cgo_yield _cgo_yield
 //go:linkname _cgo_pthread_key_created _cgo_pthread_key_created
 //go:linkname _cgo_bindm _cgo_bindm
+//go:linkname _cgo_get_thread_g _cgo_get_thread_g
 //go:linkname _cgo_getstackbound _cgo_getstackbound
 
 var (
@@ -31,8 +32,13 @@ var (
 	_cgo_yield                    unsafe.Pointer
 	_cgo_pthread_key_created      unsafe.Pointer
 	_cgo_bindm                    unsafe.Pointer
+	_cgo_get_thread_g             unsafe.Pointer
 	_cgo_getstackbound            unsafe.Pointer
 )
+
+// cgoGetThreadGFn holds x_cgo_get_thread_g for asm_arm.s, which loads it
+// directly when recovering a bound g. osinit sets it at startup.
+var cgoGetThreadGFn unsafe.Pointer
 
 // iscgo is set to true by the runtime/cgo package
 //

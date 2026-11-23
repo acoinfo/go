@@ -128,6 +128,7 @@ func getCPUCount() int32 {
 }
 
 func osinit() {
+	cgoGetThreadGFn = _cgo_get_thread_g
 	vprocExitModeSet(_LW_VPROC_EXIT_FORCE)
 
 	numCPUStartup = getCPUCount()
