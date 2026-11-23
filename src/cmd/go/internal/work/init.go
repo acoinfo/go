@@ -261,7 +261,11 @@ func buildModeInit() {
 		ldBuildmode = "exe"
 		if platform.DefaultPIE(cfg.Goos, cfg.Goarch, cfg.BuildRace) {
 			ldBuildmode = "pie"
-			if cfg.Goos != "windows" && !gccgo && cfg.Goos != "sylixos" {
+			// SylixOS/arm32 has no PC-relative literal addressing, so it
+			// needs -shared code generation even though SylixOS is
+			// excluded from it on the other architectures: absolute
+			// address literals in .text would require text relocations.
+			if cfg.Goos != "windows" && !gccgo && (cfg.Goos != "sylixos" || cfg.Goarch == "arm") {
 				codegenArg = "-shared"
 			}
 		}
