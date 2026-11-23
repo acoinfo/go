@@ -71,6 +71,41 @@ TEXT runtime·sigtramp(SB),NOSPLIT|TOPFRAME,$0
 	MOVW	R1, 8(R13)		// info
 	MOVW	R2, 12(R13)		// ctx
 	BL	runtime·load_g(SB)
+#ifdef GOOS_sylixos
+	// SylixOS/ARM32 does not install a thread pointer, so load_g leaves g
+	// untouched. On a non-Go thread R10 is the signal handler entry point
+	// (inside our text); on a Go thread inside C code it is a valid g.
+	// Clear anything that is not a plausible g so sigtrampgo takes the
+	// badsignal/needm path instead of dereferencing a fake *g.
+	MOVW	$runtime·text(SB), R3
+	CMP	R3, g
+	B.LO	sigtramp_gcheck
+	MOVW	$runtime·etext(SB), R3
+	CMP	R3, g
+	B.HS	sigtramp_gcheck
+	MOVW	$0, g
+	B	sigtramp_gok
+sigtramp_gcheck:
+	CMP	$0, g
+	BEQ	sigtramp_gok
+	MOVW	g_m(g), R4
+	MOVW	$-1, R3
+	CMP	R3, R4
+	BEQ	sigtramp_badg
+	CMP	$0, R4
+	BEQ	sigtramp_badg
+	MOVW	R4, R3
+	BIC	$7, R3
+	CMP	R3, R4
+	BNE	sigtramp_badg
+	MOVW	m_g0(R4), R3
+	CMP	$0, R3
+	BEQ	sigtramp_badg
+	B	sigtramp_gok
+sigtramp_badg:
+	MOVW	$0, g
+sigtramp_gok:
+#endif
 	MOVW	64(R2), R4		// interrupted pc
 	MOVW	$runtime·text(SB), R3
 	CMP	R3, R4
