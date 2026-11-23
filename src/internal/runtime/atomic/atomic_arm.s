@@ -305,6 +305,12 @@ TEXT ·Cas64(SB),NOSPLIT,$-4-21
 	MOVW	addr+0(FP), R1
 	CHECK_ALIGN
 
+	// SylixOS arm32: LDREXD/STREXD (and LDREXB/STREXB) fault on this
+	// platform, so force the lock-based fallbacks built on 32-bit
+	// LDREX/STREX, which work.
+#ifdef GOOS_sylixos
+	JMP	·goCas64(SB)
+#else
 #ifndef GOARM_7
 	MOVB	internal∕cpu·ARM+const_offsetARMHasV7Atomics(SB), R11
 	CMP	$1, R11
@@ -312,12 +318,16 @@ TEXT ·Cas64(SB),NOSPLIT,$-4-21
 	JMP	·goCas64(SB)
 #endif
 	JMP	armCas64<>(SB)
+#endif
 
 TEXT ·Xadd64(SB),NOSPLIT,$-4-20
 	NO_LOCAL_POINTERS
 	MOVW	addr+0(FP), R1
 	CHECK_ALIGN
 
+#ifdef GOOS_sylixos
+	JMP	·goXadd64(SB)
+#else
 #ifndef GOARM_7
 	MOVB	internal∕cpu·ARM+const_offsetARMHasV7Atomics(SB), R11
 	CMP	$1, R11
@@ -325,12 +335,16 @@ TEXT ·Xadd64(SB),NOSPLIT,$-4-20
 	JMP	·goXadd64(SB)
 #endif
 	JMP	armXadd64<>(SB)
+#endif
 
 TEXT ·Xchg64(SB),NOSPLIT,$-4-20
 	NO_LOCAL_POINTERS
 	MOVW	addr+0(FP), R1
 	CHECK_ALIGN
 
+#ifdef GOOS_sylixos
+	JMP	·goXchg64(SB)
+#else
 #ifndef GOARM_7
 	MOVB	internal∕cpu·ARM+const_offsetARMHasV7Atomics(SB), R11
 	CMP	$1, R11
@@ -338,12 +352,16 @@ TEXT ·Xchg64(SB),NOSPLIT,$-4-20
 	JMP	·goXchg64(SB)
 #endif
 	JMP	armXchg64<>(SB)
+#endif
 
 TEXT ·Load64(SB),NOSPLIT,$-4-12
 	NO_LOCAL_POINTERS
 	MOVW	addr+0(FP), R1
 	CHECK_ALIGN
 
+#ifdef GOOS_sylixos
+	JMP	·goLoad64(SB)
+#else
 #ifndef GOARM_7
 	MOVB	internal∕cpu·ARM+const_offsetARMHasV7Atomics(SB), R11
 	CMP	$1, R11
@@ -351,12 +369,16 @@ TEXT ·Load64(SB),NOSPLIT,$-4-12
 	JMP	·goLoad64(SB)
 #endif
 	JMP	armLoad64<>(SB)
+#endif
 
 TEXT ·Store64(SB),NOSPLIT,$-4-12
 	NO_LOCAL_POINTERS
 	MOVW	addr+0(FP), R1
 	CHECK_ALIGN
 
+#ifdef GOOS_sylixos
+	JMP	·goStore64(SB)
+#else
 #ifndef GOARM_7
 	MOVB	internal∕cpu·ARM+const_offsetARMHasV7Atomics(SB), R11
 	CMP	$1, R11
@@ -364,6 +386,7 @@ TEXT ·Store64(SB),NOSPLIT,$-4-12
 	JMP	·goStore64(SB)
 #endif
 	JMP	armStore64<>(SB)
+#endif
 
 TEXT ·And8(SB),NOSPLIT,$-4-5
 	NO_LOCAL_POINTERS
@@ -371,6 +394,9 @@ TEXT ·And8(SB),NOSPLIT,$-4-5
 
 // Uses STREXB/LDREXB that is armv6k or later.
 // For simplicity we only enable this on armv7.
+#ifdef GOOS_sylixos
+	JMP	·goAnd8(SB)
+#else
 #ifndef GOARM_7
 	MOVB	internal∕cpu·ARM+const_offsetARMHasV7Atomics(SB), R11
 	CMP	$1, R11
@@ -378,6 +404,7 @@ TEXT ·And8(SB),NOSPLIT,$-4-5
 	JMP	·goAnd8(SB)
 #endif
 	JMP	armAnd8<>(SB)
+#endif
 
 TEXT ·Or8(SB),NOSPLIT,$-4-5
 	NO_LOCAL_POINTERS
@@ -385,6 +412,9 @@ TEXT ·Or8(SB),NOSPLIT,$-4-5
 
 // Uses STREXB/LDREXB that is armv6k or later.
 // For simplicity we only enable this on armv7.
+#ifdef GOOS_sylixos
+	JMP	·goOr8(SB)
+#else
 #ifndef GOARM_7
 	MOVB	internal∕cpu·ARM+const_offsetARMHasV7Atomics(SB), R11
 	CMP	$1, R11
@@ -392,6 +422,7 @@ TEXT ·Or8(SB),NOSPLIT,$-4-5
 	JMP	·goOr8(SB)
 #endif
 	JMP	armOr8<>(SB)
+#endif
 
 TEXT ·Xchg8(SB),NOSPLIT,$-4-9
 	NO_LOCAL_POINTERS
@@ -399,6 +430,9 @@ TEXT ·Xchg8(SB),NOSPLIT,$-4-9
 
 	// Uses STREXB/LDREXB that is armv6k or later.
 	// For simplicity we only enable this on armv7.
+#ifdef GOOS_sylixos
+	JMP	·goXchg8(SB)
+#else
 #ifndef GOARM_7
 	MOVB	internal∕cpu·ARM+const_offsetARMHasV7Atomics(SB), R11
 	CMP	$1, R11
@@ -406,3 +440,4 @@ TEXT ·Xchg8(SB),NOSPLIT,$-4-9
 	JMP	·goXchg8(SB)
 #endif
 	JMP	armXchg8<>(SB)
+#endif

@@ -94,7 +94,8 @@ func archinit(ctxt *ld.Link) {
 	case objabi.Hlinux, /* arm elf */
 		objabi.Hfreebsd,
 		objabi.Hnetbsd,
-		objabi.Hopenbsd:
+		objabi.Hopenbsd,
+		objabi.Hsylixos:
 		*ld.FlagD = false
 		// with dynamic linking
 		ld.Elfinit(ctxt)

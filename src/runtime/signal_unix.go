@@ -357,7 +357,7 @@ func doSigPreempt(gp *g, ctxt *sigctxt) {
 	}
 }
 
-const preemptMSupported = true
+const preemptMSupported = GOOS != "sylixos"
 
 // preemptM sends a preemption request to mp. This request may be
 // handled asynchronously and may be coalesced with other requests to
@@ -370,6 +370,10 @@ func preemptM(mp *m) {
 	// Issue #41702.
 	if GOOS == "darwin" || GOOS == "ios" {
 		execLock.rlock()
+	} else if GOOS == "sylixos" {
+		// SylixOS: async preemption can lose the wakeup of a thread
+		// parked in a semaphore under SRTP, so keep it disabled.
+		return
 	}
 
 	if mp.signalPending.CompareAndSwap(0, 1) {
@@ -444,7 +448,7 @@ func sigtrampgo(sig uint32, info *siginfo, ctx unsafe.Pointer) {
 			}
 			return
 		}
-		if sig == sigPreempt && preemptMSupported && debug.asyncpreemptoff == 0 {
+		if sig == sigPreempt && preemptMSupported && GOOS != "sylixos" && debug.asyncpreemptoff == 0 {
 			// This is probably a signal from preemptM sent
 			// while executing Go code but received while
 			// executing non-Go code.
@@ -1388,7 +1392,7 @@ func blockableSig(sig uint32) bool {
 	if flags&_SigUnblock != 0 {
 		return false
 	}
-	if sig == sigPreempt && preemptMSupported && debug.asyncpreemptoff == 0 {
+	if sig == sigPreempt && preemptMSupported && GOOS != "sylixos" && debug.asyncpreemptoff == 0 {
 		return false
 	}
 	if isarchive || islibrary {

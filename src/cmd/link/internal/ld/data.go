@@ -372,10 +372,16 @@ func (st *relocSymState) relocsym(s loader.Sym, P []byte) {
 					if target.IsAMD64() {
 						o = 0
 					}
-					if target.IsSylixos() {
+					if target.IsSylixos() && !target.IsARM() {
 						// SylixOS BFD ld adds the implicit
 						// data addend on top of the RELA addend.
 						// Zero the data to avoid double counting.
+						//
+						// arm32 is a REL target: the relocation
+						// record has no addend field, so the value
+						// stored in the section is the only addend
+						// and symbol+offset references would lose
+						// the offset if it were zeroed.
 						o = 0
 					}
 				} else if target.IsDarwin() {

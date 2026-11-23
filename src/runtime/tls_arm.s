@@ -23,6 +23,19 @@
 #define TLSG_IS_VARIABLE
 #endif
 
+#ifdef GOOS_sylixos
+// SylixOS ARM32 has no usable TLS relocation in a shared object: GNU ld
+// rejects R_ARM_TLS_LE32 with "relocation not permitted in shared object",
+// and the SylixOS loader only processes REL relocations (no TLS ones).
+//
+// Instead, address the slot with a link-time constant.  SylixOS sets
+// TPIDRURO to TLS_block - ARCH_TLS_TCB_SIZE (8, see arch_regs.h), and
+// runtime.tls_g is the first and only variable of the Go binary's TLS
+// segment, so the slot sits at TP + 8.  runtime.tls_g stays TLSBSS so the
+// loader still allocates a TLS block for the process and installs TP.
+#define TLSG_SYLIXOS_OFF	8
+#endif
+
 // save_g saves the g register into pthread-provided
 // thread-local memory, so that we can call externally compiled
 // ARM code that will overwrite those registers.
@@ -37,9 +50,19 @@ TEXT runtime·save_g(SB),NOSPLIT,$0
 	// as it may contain a call, which clobbers LR even just temporarily.
 	MRC	15, 0, R0, C13, C0, 3 // fetch TLS base pointer
 	BIC $3, R0 // Darwin/ARM might return unaligned pointer
+#ifdef GOOS_sylixos
+	// No TLS block installed by the loader: nowhere to save g.
+	CMP	$0, R0
+	BEQ	sylixos_no_tls_save
+	MOVW	$TLSG_SYLIXOS_OFF, R11
+#else
 	MOVW	runtime·tls_g(SB), R11
+#endif
 	ADD	R11, R0
 	MOVW	g, 0(R0)
+#ifdef GOOS_sylixos
+sylixos_no_tls_save:
+#endif
 	MOVW	g, R0 // preserve R0 across call to setg<>
 	RET
 
@@ -50,9 +73,19 @@ TEXT runtime·load_g(SB),NOSPLIT,$0
 	// See save_g
 	MRC	15, 0, R0, C13, C0, 3 // fetch TLS base pointer
 	BIC $3, R0 // Darwin/ARM might return unaligned pointer
+#ifdef GOOS_sylixos
+	// No TLS block installed by the loader: leave g untouched.
+	CMP	$0, R0
+	BEQ	sylixos_no_tls_load
+	MOVW	$TLSG_SYLIXOS_OFF, R11
+#else
 	MOVW	runtime·tls_g(SB), R11
+#endif
 	ADD	R11, R0
 	MOVW	0(R0), g
+#ifdef GOOS_sylixos
+sylixos_no_tls_load:
+#endif
 	RET
 
 // This is called from rt0_go, which runs on the system stack

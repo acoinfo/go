@@ -621,11 +621,12 @@ func moduledataverify1(datap *moduledata) {
 
 	// --- SylixOS: repair string tables + typelinks corrupted by external linker ---
 	loadBias := uintptr(0)
-	if GOOS == "sylixos" && datap.minpc > 0x40000000000 {
-		loadBias = 0x40000000000
+	biasBase := uint64(0x40000000000)
+	if GOOS == "sylixos" && goarch.PtrSize == 8 && uint64(datap.minpc) > biasBase {
+		loadBias = uintptr(biasBase)
 	}
-	if loadBias == 0 && GOOS == "sylixos" && datap.text > 0x40000000000 {
-		loadBias = 0x40000000000
+	if loadBias == 0 && GOOS == "sylixos" && goarch.PtrSize == 8 && uint64(datap.text) > biasBase {
+		loadBias = uintptr(biasBase)
 	}
 	if loadBias > 0 {
 		fixStrArr := func(arr []string) {

@@ -1566,7 +1566,7 @@ func libc_ioctl_trampoline()
 
 //go:cgo_import_dynamic libc_ioctl ioctl "libvpmpdm.so"
 
-func IoctlPtr(fd int, req int, arg unsafe.Pointer) (err error) {
+func IoctlPtr(fd int, req uintptr, arg unsafe.Pointer) (err error) {
 	_, _, e1 := rawSyscall(abi.FuncPCABI0(libc_ioctl_trampoline), uintptr(fd), uintptr(req), uintptr(arg))
 	if e1 != 0 {
 		err = errnoErr(e1)

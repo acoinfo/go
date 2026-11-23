@@ -121,6 +121,9 @@ TEXT runtime·rt0_go(SB),NOSPLIT|NOFRAME|TOPFRAME,$0
 	AND	$~7, R13
 	MOVW	R0, 60(R13)		// save argc, argv away
 	MOVW	R1, 64(R13)
+#ifdef GOOS_sylixos
+	MOVW	R2, 56(R13)		// save envp away
+#endif
 
 	// set up g register
 	// g is R10
@@ -140,10 +143,21 @@ TEXT runtime·rt0_go(SB),NOSPLIT|NOFRAME|TOPFRAME,$0
 	MOVW	R0, (g_stack+stack_lo)(g)
 	MOVW	R13, (g_stack+stack_hi)(g)
 
+#ifdef GOOS_sylixos
+	// SylixOS starts a process with argc, argv, envp in R0, R1, R2.
+	// Record envp so that runtime.goenvs can walk it.
+	MOVW	56(R13), R0
+	MOVW	R0, 4(R13)
+	BL	runtime·sylixosenvs(SB)
+#endif
+
 	BL	runtime·emptyfunc(SB)	// fault if stack check is wrong
 
-#ifdef GOOS_openbsd
 	// Save g to TLS so that it is available from signal trampoline.
+#ifdef GOOS_openbsd
+	BL	runtime·save_g(SB)
+#endif
+#ifdef GOOS_sylixos
 	BL	runtime·save_g(SB)
 #endif
 
