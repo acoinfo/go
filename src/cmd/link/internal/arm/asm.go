@@ -202,7 +202,7 @@ func adddynrel(target *ld.Target, ldr *loader.Loader, syms *ld.ArchSyms, s loade
 		return true
 	}
 
-	if target.IsPIE() && target.IsInternal() && r.Type() == objabi.R_ADDR {
+	if targType != sym.SDYNIMPORT && target.IsPIE() && target.IsInternal() && r.Type() == objabi.R_ADDR {
 		// Internally linked PIE: absolute addresses of local symbols are
 		// stored as link-time virtual addresses and must be adjusted by
 		// the dynamic loader, so emit an R_ARM_RELATIVE entry (REL form,

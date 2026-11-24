@@ -1775,7 +1775,7 @@ func buildModeSupported(compiler, buildmode, goos, goarch string) bool {
 			"aix/ppc64",
 			"openbsd/arm64",
 			"windows/386", "windows/amd64", "windows/arm", "windows/arm64",
-			"sylixos/amd64", "sylixos/arm64":
+			"sylixos/arm", "sylixos/amd64", "sylixos/arm64":
 			return true
 		}
 		return false
@@ -1783,7 +1783,7 @@ func buildModeSupported(compiler, buildmode, goos, goarch string) bool {
 	case "shared":
 		switch platform {
 		case "linux/386", "linux/amd64", "linux/arm", "linux/arm64", "linux/ppc64le", "linux/s390x",
-			"sylixos/amd64", "sylixos/arm64":
+			"sylixos/arm", "sylixos/amd64", "sylixos/arm64":
 			return true
 		}
 		return false

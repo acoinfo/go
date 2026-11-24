@@ -56,3 +56,22 @@ const (
 	SIOCSIFTCPAF   = 0x8030693f
 	SIOCSIFTCPWND  = 0x80306941
 )
+
+// The remaining word-size-dependent ioctl numbers: the structs contain
+// u_long or pointers, so their LP64 sizes differ from ILP32.
+const (
+	SIOCGIFSTATS = 0xc0b86950
+	SIOCADDRT    = 0x8130720a
+	SIOCDELRT    = 0x8130720b
+	SIOCCHGRT    = 0x8130720c
+	SIOCGETRT    = 0xc130720d
+	SIOCLSTRT    = 0xc020720e
+	SIOCLSTRTM   = 0xc020720f
+	SIOCGFWOPT   = 0x40887215
+	SIOCSFWOPT   = 0x80887215
+	SIOCSHIWAT   = 0x80087300
+	SIOCGHIWAT   = 0x40087301
+	SIOCSLOWAT   = 0x80087302
+	SIOCGLOWAT   = 0x40087303
+	SIOCATMARK   = 0x40087307
+)

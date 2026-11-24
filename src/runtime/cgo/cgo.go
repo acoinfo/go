@@ -28,6 +28,10 @@ package cgo
 // Use -Wdeclaration-after-statement because some CI builds use it.
 #cgo CFLAGS: -Wall -Werror -fno-stack-protector -Wdeclaration-after-statement
 
+// GOOS_* is only passed to the assembler by cmd/go; define it for C files
+// so that #ifdef GOOS_sylixos works (e.g. gcc_libinit.c's stack size).
+#cgo sylixos CFLAGS: -DGOOS_sylixos
+
 #cgo solaris CPPFLAGS: -D_POSIX_PTHREAD_SEMANTICS
 
 */

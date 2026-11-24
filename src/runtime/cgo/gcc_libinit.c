@@ -147,6 +147,9 @@ void x_cgo_bindm(void* g) {
 // recover g from TLS on a thread created by C. It uses this to reuse the m
 // bound by the first call instead of allocating a new one every time.
 void* x_cgo_get_thread_g(void) {
+	if (!x_cgo_pthread_key_created) {
+		return 0;
+	}
 	return pthread_getspecific(pthread_g);
 }
 

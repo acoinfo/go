@@ -719,7 +719,11 @@ cgocallback_badg:
 	MOVW	runtime·cgoGetThreadGFn(SB), R3
 	CMP	$0, R3
 	BEQ	cgocallback_needm
+	// The C ABI requires an 8-byte aligned SP at the call.
+	MOVW	R13, R4
+	BIC	$7, R13
 	BL	(R3)
+	MOVW	R4, R13
 	MOVW	R0, g
 	CMP	$0, g
 	BEQ	cgocallback_needm

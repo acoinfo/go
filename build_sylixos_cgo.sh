@@ -15,10 +15,10 @@
 # ============================================================
 
 set -e
+set -o pipefail
 
 # ── Target architecture ───────────────────────────────────────────
 GOARCH="${GOARCH:-arm64}"
-export GOARCH
 case "$GOARCH" in
 arm64)
     SYLIXOS_SDK="${SYLIXOS_SDK:-D:/workspace/IGC3503/Base_ecs_64_3503}"
@@ -46,6 +46,10 @@ SYLIXOS_CEXTERN_INC="$SYLIXOS_SDK/libcextern/libcextern/include"
 SYLIXOS_LIB="$SYLIXOS_SDK/libsylixos/Release"
 SYLIXOS_CEXTERN_LIB="$SYLIXOS_SDK/libcextern/Release"
 GCC_INC="$("$SYLIXOS_GCC" -print-file-name=include-fixed)"
+if [ ! -d "$GCC_INC" ]; then
+    echo "cannot resolve gcc include-fixed for $SYLIXOS_GCC" >&2
+    exit 1
+fi
 
 GO_SRC="$(cd "$(dirname "$0")" && pwd)"
 CGO_TEST="$GO_SRC/cgo-test"
@@ -67,7 +71,9 @@ echo_step "1/3 Building Go compiler for SylixOS CGO..."
 export CGO_CFLAGS="-I$SYLIXOS_INC -I$SYLIXOS_INC2 -I$SYLIXOS_INC_NET -I$SYLIXOS_CEXTERN_INC -I$GCC_INC -fno-exceptions -fno-unwind-tables -fPIC"
 
 cd "$GO_SRC/src"
-./make.bat 2>&1 | tail -5
+# make.bat builds the host toolchain. GOARCH must not leak into it: with
+# GOARCH=arm, dist would try windows/arm, which is marked broken.
+(unset GOARCH; ./make.bat 2>&1 | tail -5)
 echo_ok "Go compiler built"
 
 # ── Step 2: Build C Stub Library ──────────────────────────────────
@@ -89,12 +95,14 @@ echo_step "3/3 Cross-compiling CGO test program..."
 
 export GOOS="sylixos"
 export CGO_ENABLED="1"
+export GOARCH
 if [ "$GOARCH" = "arm" ]; then
     export GOARM="${GOARM:-7}"
 fi
 export CC="$SYLIXOS_GCC"
 export CGO_LDFLAGS="-v -shared -L$SYLIXOS_LIB -L$SYLIXOS_CEXTERN_LIB -L. -lcextern -lvpmpdm -lfastlock -lgolib"
 
+rm -f main_nc_sylixos
 "$GO_SRC/bin/go" build -a -ldflags="-linkmode=external" -o main_nc_sylixos main_nc.go 2>&1 | tail -3
 
 if [ -f main_nc_sylixos ]; then
