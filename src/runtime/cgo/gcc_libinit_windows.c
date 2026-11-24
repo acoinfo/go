@@ -104,6 +104,11 @@ void x_cgo_bindm(void* dummy) {
 	abort();
 }
 
+// Should not be used since x_cgo_pthread_key_created will always be zero.
+void* x_cgo_get_thread_g(void) {
+	return 0;
+}
+
 void
 x_cgo_notify_runtime_init_done(void* dummy) {
 	 _cgo_maybe_run_preinit();

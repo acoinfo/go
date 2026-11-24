@@ -202,6 +202,23 @@ func adddynrel(target *ld.Target, ldr *loader.Loader, syms *ld.ArchSyms, s loade
 		return true
 	}
 
+	if targType != sym.SDYNIMPORT && target.IsPIE() && target.IsInternal() && r.Type() == objabi.R_ADDR {
+		// Internally linked PIE: absolute addresses of local symbols are
+		// stored as link-time virtual addresses and must be adjusted by
+		// the dynamic loader, so emit an R_ARM_RELATIVE entry (REL form,
+		// the addend is the value already at the relocation site).
+		// Skip the dynamic tables themselves; their fields are resolved
+		// statically.
+		switch ldr.SymName(s) {
+		case ".dynsym", ".rel", ".rel.plt", ".got.plt", ".dynamic":
+			return false
+		}
+		rel := ldr.MakeSymbolUpdater(syms.Rel)
+		rel.AddAddrPlus(target.Arch, s, int64(r.Off()))
+		rel.AddUint32(target.Arch, elf.R_INFO32(0, uint32(elf.R_ARM_RELATIVE)))
+		return true
+	}
+
 	// Handle references to ELF symbols from our own object files.
 	if targType != sym.SDYNIMPORT {
 		return true

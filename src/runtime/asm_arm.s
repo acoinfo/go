@@ -121,6 +121,9 @@ TEXT runtime·rt0_go(SB),NOSPLIT|NOFRAME|TOPFRAME,$0
 	AND	$~7, R13
 	MOVW	R0, 60(R13)		// save argc, argv away
 	MOVW	R1, 64(R13)
+#ifdef GOOS_sylixos
+	MOVW	R2, 56(R13)		// save envp away
+#endif
 
 	// set up g register
 	// g is R10
@@ -140,10 +143,21 @@ TEXT runtime·rt0_go(SB),NOSPLIT|NOFRAME|TOPFRAME,$0
 	MOVW	R0, (g_stack+stack_lo)(g)
 	MOVW	R13, (g_stack+stack_hi)(g)
 
+#ifdef GOOS_sylixos
+	// SylixOS starts a process with argc, argv, envp in R0, R1, R2.
+	// Record envp so that runtime.goenvs can walk it.
+	MOVW	56(R13), R0
+	MOVW	R0, 4(R13)
+	BL	runtime·sylixosenvs(SB)
+#endif
+
 	BL	runtime·emptyfunc(SB)	// fault if stack check is wrong
 
-#ifdef GOOS_openbsd
 	// Save g to TLS so that it is available from signal trampoline.
+#ifdef GOOS_openbsd
+	BL	runtime·save_g(SB)
+#endif
+#ifdef GOOS_sylixos
 	BL	runtime·save_g(SB)
 #endif
 
@@ -681,6 +695,57 @@ loadg:
 	B.EQ	needm
 
 	MOVW	g_m(g), R8
+#ifdef GOOS_sylixos
+	// SylixOS/ARM32 does not install a thread pointer for the process, so
+	// load_g cannot recover g on a thread created by C. Such a thread may
+	// have a garbage g register; validate g->m and fall back to needm.
+	MOVW	$-1, R12
+	CMP	R12, R8
+	B.EQ	cgocallback_badg
+	CMP	$0, R8
+	B.EQ	cgocallback_badg
+	MOVW	R8, R12
+	BIC	$7, R12
+	CMP	R12, R8
+	B.NE	cgocallback_badg
+	MOVW	m_g0(R8), R3
+	CMP	$0, R3
+	B.EQ	cgocallback_badg
+	B	cgocallback_goodg
+cgocallback_badg:
+	// Try the g bound to this pthread by a previous needm. On SylixOS/ARM32
+	// the g register may be clobbered by C code between callbacks, so the
+	// pthread key is the only place to recover the borrowed m.
+	MOVW	runtime·cgoGetThreadGFn(SB), R3
+	CMP	$0, R3
+	BEQ	cgocallback_needm
+	// The C ABI requires an 8-byte aligned SP at the call.
+	MOVW	R13, R4
+	BIC	$7, R13
+	BL	(R3)
+	MOVW	R4, R13
+	MOVW	R0, g
+	CMP	$0, g
+	BEQ	cgocallback_needm
+	MOVW	g_m(g), R8
+	CMP	$0, R8
+	BEQ	cgocallback_needm
+	MOVW	$-1, R3
+	CMP	R3, R8
+	BEQ	cgocallback_needm
+	MOVW	R8, R3
+	BIC	$7, R3
+	CMP	R3, R8
+	BNE	cgocallback_needm
+	MOVW	m_g0(R8), R3
+	CMP	$0, R3
+	BEQ	cgocallback_needm
+	B	cgocallback_goodg
+cgocallback_needm:
+	MOVW	$0, g
+	B	needm
+cgocallback_goodg:
+#endif
 	MOVW	R8, savedm-4(SP)
 	B	havem
 

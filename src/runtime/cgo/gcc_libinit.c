@@ -142,6 +142,17 @@ void x_cgo_bindm(void* g) {
 	pthread_setspecific(pthread_g, g);
 }
 
+// Return the g bound to the current thread by x_cgo_bindm, or nil.
+// SylixOS/ARM32 does not install a thread pointer, so cgocallback cannot
+// recover g from TLS on a thread created by C. It uses this to reuse the m
+// bound by the first call instead of allocating a new one every time.
+void* x_cgo_get_thread_g(void) {
+	if (!x_cgo_pthread_key_created) {
+		return 0;
+	}
+	return pthread_getspecific(pthread_g);
+}
+
 void
 x_cgo_notify_runtime_init_done(void* dummy __attribute__ ((unused))) {
 	pthread_mutex_lock(&runtime_init_mu);

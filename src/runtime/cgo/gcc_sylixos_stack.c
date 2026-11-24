@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build sylixos
+
 // SylixOS stack-bound query.
 //
 // SylixOS does not expose pthread_getattr_np, so the generic unix

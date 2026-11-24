@@ -1824,6 +1824,7 @@ var cgoEnabled = map[string]bool{
 	"windows/arm":     false,
 	"windows/arm64":   true,
 	"sylixos/amd64":   true,
+	"sylixos/arm":     true,
 	"sylixos/arm64":   true,
 }
 

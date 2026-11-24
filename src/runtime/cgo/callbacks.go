@@ -107,6 +107,12 @@ var _set_crosscall2 = set_crosscall2
 var x_cgo_bindm byte
 var _cgo_bindm = &x_cgo_bindm
 
+//go:cgo_import_static x_cgo_get_thread_g
+//go:linkname x_cgo_get_thread_g x_cgo_get_thread_g
+//go:linkname _cgo_get_thread_g _cgo_get_thread_g
+var x_cgo_get_thread_g byte
+var _cgo_get_thread_g = &x_cgo_get_thread_g
+
 // Notifies that the runtime has been initialized.
 //
 // We currently block at every CGO entry point (via _cgo_wait_runtime_init_done)

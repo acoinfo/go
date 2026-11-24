@@ -79,7 +79,7 @@ func makechan(t *chantype, size int) *hchan {
 	if elem.Size_ >= 1<<16 || elem.Align_ == 0 || elem.Align_ > 64 {
 		// SylixOS external linker may corrupt type metadata.
 		// Fix Size_: if it looks like a relocated address, extract low bits.
-		if elem.Size_ > 0x40000000000 {
+		if uint64(elem.Size_) > 0x40000000000 {
 			lo := uint32(elem.Size_ & 0xFFFFFFFF)
 			if lo > 0 && lo < 1<<16 {
 				elem.Size_ = uintptr(lo)

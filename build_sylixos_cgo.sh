@@ -10,15 +10,34 @@
 #   2. Bootstrap Go (go1.24+) at C:\Users\<user>\go
 #   3. Git Bash on Windows
 #
-# Usage:  ./build_sylixos_cgo.sh
+# Usage:  ./build_sylixos_cgo.sh            # arm64 (default)
+#         GOARCH=arm ./build_sylixos_cgo.sh # arm32
 # ============================================================
 
 set -e
+set -o pipefail
+
+# ── Target architecture ───────────────────────────────────────────
+GOARCH="${GOARCH:-arm64}"
+case "$GOARCH" in
+arm64)
+    SYLIXOS_SDK="${SYLIXOS_SDK:-D:/workspace/IGC3503/Base_ecs_64_3503}"
+    SYLIXOS_GCC="${SYLIXOS_GCC:-D:/ACOINFO/RealEvo/compiler/aarch64-sylixos-toolchain/bin/aarch64-sylixos-elf-gcc.exe}"
+    TOOLCHAIN_PREFIX="aarch64-sylixos-elf"
+    ;;
+arm)
+    SYLIXOS_SDK="${SYLIXOS_SDK:-D:/workspace/IGC3503/Base_ecs_32_1503}"
+    SYLIXOS_GCC="${SYLIXOS_GCC:-D:/ACOINFO/RealEvo/compiler/arm-sylixos-toolchain/bin/arm-sylixos-eabi-gcc.exe}"
+    TOOLCHAIN_PREFIX="arm-sylixos-eabi"
+    ;;
+*)
+    echo "unsupported GOARCH=$GOARCH (expected arm or arm64)" >&2
+    exit 1
+    ;;
+esac
 
 # ── Paths (edit these to match your environment) ──────────────────
 GOROOT_BOOTSTRAP="${GOROOT_BOOTSTRAP:-$HOME/go}"
-SYLIXOS_SDK="${SYLIXOS_SDK:-D:/workspace/IGC3503/Base_ecs_64_3503}"
-SYLIXOS_GCC="${SYLIXOS_GCC:-D:/RealEvo/compiler/aarch64-sylixos-toolchain/bin/aarch64-sylixos-elf-gcc.exe}"
 
 SYLIXOS_INC="$SYLIXOS_SDK/libsylixos/SylixOS"
 SYLIXOS_INC2="$SYLIXOS_SDK/libsylixos/SylixOS/include"
@@ -26,7 +45,11 @@ SYLIXOS_INC_NET="$SYLIXOS_SDK/libsylixos/SylixOS/include/network"
 SYLIXOS_CEXTERN_INC="$SYLIXOS_SDK/libcextern/libcextern/include"
 SYLIXOS_LIB="$SYLIXOS_SDK/libsylixos/Release"
 SYLIXOS_CEXTERN_LIB="$SYLIXOS_SDK/libcextern/Release"
-GCC_INC="$GCC_INC_PREFIX/lib/gcc/aarch64-sylixos-elf/10.2.1/include-fixed"
+GCC_INC="$("$SYLIXOS_GCC" -print-file-name=include-fixed)"
+if [ ! -d "$GCC_INC" ]; then
+    echo "cannot resolve gcc include-fixed for $SYLIXOS_GCC" >&2
+    exit 1
+fi
 
 GO_SRC="$(cd "$(dirname "$0")" && pwd)"
 CGO_TEST="$GO_SRC/cgo-test"
@@ -43,37 +66,33 @@ echo_warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 echo_fail()  { echo -e "${RED}[FAIL]${NC} $*"; }
 
 # ── Step 1: Build Go Compiler ─────────────────────────────────────
-echo_step "1/3 Building Go compiler for SylixOS CGO..."
+echo_step "1/2 Building Go compiler for SylixOS CGO..."
 
 export CGO_CFLAGS="-I$SYLIXOS_INC -I$SYLIXOS_INC2 -I$SYLIXOS_INC_NET -I$SYLIXOS_CEXTERN_INC -I$GCC_INC -fno-exceptions -fno-unwind-tables -fPIC"
 
 cd "$GO_SRC/src"
-./make.bat 2>&1 | tail -5
+# make.bat builds the host toolchain. GOARCH must not leak into it: with
+# GOARCH=arm, dist would try windows/arm, which is marked broken.
+(unset GOARCH; ./make.bat 2>&1 | tail -5)
 echo_ok "Go compiler built"
 
-# ── Step 2: Build C Stub Library ──────────────────────────────────
-echo_step "2/3 Building C stub library (libgolib.so)..."
+# ── Step 2: Cross-Compile CGO Test Program ────────────────────────
+# libgolib.so is gone: the runtime now provides x_cgo_init and the
+# thread-start hooks itself, and the working arm/arm64 recipes never
+# linked it.
+echo_step "2/2 Cross-compiling CGO test program..."
 
 cd "$CGO_TEST"
-"$SYLIXOS_GCC" -shared -fPIC -o libgolib.so golib.c \
-    -I"$SYLIXOS_INC" -I"$SYLIXOS_INC2" 2>&1
-
-if [ -f libgolib.so ]; then
-    echo_ok "libgolib.so built"
-else
-    echo_fail "libgolib.so build failed"
-    exit 1
-fi
-
-# ── Step 3: Cross-Compile CGO Test Program ────────────────────────
-echo_step "3/3 Cross-compiling CGO test program..."
-
 export GOOS="sylixos"
-export GOARCH="arm64"
 export CGO_ENABLED="1"
+export GOARCH
+if [ "$GOARCH" = "arm" ]; then
+    export GOARM="${GOARM:-7}"
+fi
 export CC="$SYLIXOS_GCC"
-export CGO_LDFLAGS="-v -shared -L$SYLIXOS_LIB -L$SYLIXOS_CEXTERN_LIB -L. -lcextern -lvpmpdm -lfastlock -lgolib"
+export CGO_LDFLAGS="-v -shared -L$SYLIXOS_LIB -L$SYLIXOS_CEXTERN_LIB -lcextern -lvpmpdm -lfastlock"
 
+rm -f main_nc_sylixos
 "$GO_SRC/bin/go" build -a -ldflags="-linkmode=external" -o main_nc_sylixos main_nc.go 2>&1 | tail -3
 
 if [ -f main_nc_sylixos ]; then
@@ -95,6 +114,5 @@ echo "  Test binary:  $CGO_TEST/main_nc_sylixos"
 echo ""
 echo "  Deploy to ADP:"
 echo "    FTP upload $CGO_TEST/main_nc_sylixos → /apps/"
-echo "    FTP upload $CGO_TEST/libgolib.so → /apps/"
 echo "    telnet → cd /apps → ./main_nc_sylixos"
 echo ""

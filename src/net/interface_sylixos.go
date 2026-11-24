@@ -30,7 +30,7 @@ const (
 
 type Ifreq struct {
 	Ifrn [_IFNAMSIZ]byte
-	Ifru [32]byte
+	Ifru [ifreqIfruSize]byte
 }
 
 type IfreqMtu struct {
@@ -64,7 +64,7 @@ type In6Ifreq struct {
 	Addr6   *In6Ifraddr
 }
 
-func ioctlIfreq(fd int, req int, value *Ifreq) error {
+func ioctlIfreq(fd int, req uintptr, value *Ifreq) error {
 	return syscall.IoctlPtr(fd, req, unsafe.Pointer(value))
 }
 
