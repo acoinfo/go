@@ -54,20 +54,19 @@ export GOROOT_BOOTSTRAP="/path/to/bootstrap/go"
 export CGO_CFLAGS="-I$SDK/libsylixos/SylixOS -I$SDK/libsylixos/SylixOS/include -fno-exceptions -fPIC"
 ./make.bash        # Linux/Mac: make.bash | Windows: make.bat
 
-# B. Build C stub library
-cd ../cgo-test
-aarch64-sylixos-elf-gcc -shared -fPIC -o libgolib.so golib.c \
-    -I$SDK/libsylixos/SylixOS -I$SDK/libsylixos/SylixOS/include
-
-# C. Cross-compile
+# B. Cross-compile
+cd cgo-test
 export GOOS="sylixos" GOARCH="arm64" CGO_ENABLED="1"
 export CC="/path/to/aarch64-sylixos-elf-gcc"
-export CGO_LDFLAGS="-shared -L$SDK/libsylixos/Release -L$SDK/libcextern/Release -L. -lcextern -lgolib"
+export CGO_LDFLAGS="-shared -L$SDK/libsylixos/Release -L$SDK/libcextern/Release -lcextern -lvpmpdm -lfastlock"
 ../bin/go build -a -ldflags="-linkmode=external" -o myapp main_nc.go
 
-# D. Deploy (FTP → ADP)
-# Upload myapp + libgolib.so to /apps/, then telnet → ./myapp
+# C. Deploy (FTP → ADP)
+# Upload myapp to /apps/, then telnet → ./myapp
 ```
+
+> **Note**: The Go runtime provides `x_cgo_init` and `_cgo_sys_thread_start`
+> itself, so no external stub library is needed.
 
 > **Note**: Modifying `src/runtime/*.go` does NOT require `make.bash`. Use `go build -a`. Only `src/cmd/link/*` changes need Step A.
 
@@ -79,7 +78,6 @@ export CGO_LDFLAGS="-shared -L$SDK/libsylixos/Release -L$SDK/libcextern/Release 
 ├── src/                     # Full Go source (this branch == upstream + 8 modified files)
 ├── cgo-test/
 │   ├── main_nc.go           # CGO test program
-│   ├── golib.c              # C stub
 │   ├── build.sh             # Test-only build
 │   └── linker_analysis/     # ELF relocation analysis tools (Python)
 ```
@@ -88,7 +86,6 @@ export CGO_LDFLAGS="-shared -L$SDK/libsylixos/Release -L$SDK/libcextern/Release 
 
 - **Single-M only**: SylixOS Go runs on a single OS thread. CGO calls from multiple goroutines serialize on the C stack.
 - **External linker required**: `-ldflags="-linkmode=external"` is mandatory.
-- **Pre-built binary** (`cgo-test/main_nc_v17`) is for RK3568 only; rebuild for other boards.
 
 ## Verification
 

@@ -66,7 +66,7 @@ echo_warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 echo_fail()  { echo -e "${RED}[FAIL]${NC} $*"; }
 
 # ── Step 1: Build Go Compiler ─────────────────────────────────────
-echo_step "1/3 Building Go compiler for SylixOS CGO..."
+echo_step "1/2 Building Go compiler for SylixOS CGO..."
 
 export CGO_CFLAGS="-I$SYLIXOS_INC -I$SYLIXOS_INC2 -I$SYLIXOS_INC_NET -I$SYLIXOS_CEXTERN_INC -I$GCC_INC -fno-exceptions -fno-unwind-tables -fPIC"
 
@@ -76,23 +76,13 @@ cd "$GO_SRC/src"
 (unset GOARCH; ./make.bat 2>&1 | tail -5)
 echo_ok "Go compiler built"
 
-# ── Step 2: Build C Stub Library ──────────────────────────────────
-echo_step "2/3 Building C stub library (libgolib.so)..."
+# ── Step 2: Cross-Compile CGO Test Program ────────────────────────
+# libgolib.so is gone: the runtime now provides x_cgo_init and the
+# thread-start hooks itself, and the working arm/arm64 recipes never
+# linked it.
+echo_step "2/2 Cross-compiling CGO test program..."
 
 cd "$CGO_TEST"
-"$SYLIXOS_GCC" -shared -fPIC -o libgolib.so golib.c \
-    -I"$SYLIXOS_INC" -I"$SYLIXOS_INC2" 2>&1
-
-if [ -f libgolib.so ]; then
-    echo_ok "libgolib.so built"
-else
-    echo_fail "libgolib.so build failed"
-    exit 1
-fi
-
-# ── Step 3: Cross-Compile CGO Test Program ────────────────────────
-echo_step "3/3 Cross-compiling CGO test program..."
-
 export GOOS="sylixos"
 export CGO_ENABLED="1"
 export GOARCH
@@ -100,7 +90,7 @@ if [ "$GOARCH" = "arm" ]; then
     export GOARM="${GOARM:-7}"
 fi
 export CC="$SYLIXOS_GCC"
-export CGO_LDFLAGS="-v -shared -L$SYLIXOS_LIB -L$SYLIXOS_CEXTERN_LIB -L. -lcextern -lvpmpdm -lfastlock -lgolib"
+export CGO_LDFLAGS="-v -shared -L$SYLIXOS_LIB -L$SYLIXOS_CEXTERN_LIB -lcextern -lvpmpdm -lfastlock"
 
 rm -f main_nc_sylixos
 "$GO_SRC/bin/go" build -a -ldflags="-linkmode=external" -o main_nc_sylixos main_nc.go 2>&1 | tail -3
@@ -124,6 +114,5 @@ echo "  Test binary:  $CGO_TEST/main_nc_sylixos"
 echo ""
 echo "  Deploy to ADP:"
 echo "    FTP upload $CGO_TEST/main_nc_sylixos → /apps/"
-echo "    FTP upload $CGO_TEST/libgolib.so → /apps/"
 echo "    telnet → cd /apps → ./main_nc_sylixos"
 echo ""

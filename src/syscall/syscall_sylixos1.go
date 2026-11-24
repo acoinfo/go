@@ -66,6 +66,14 @@ func sendfile(outfd int, infd int, offset *int64, count int) (written int, err e
 
 /*
  * Exposed directly
+ *
+ * mmap, Ftruncate, pread, pwrite, Truncate and Seek take or return a
+ * 64-bit off_t, which arm32 has to pass per the ARM AAPCS. They are
+ * implemented per architecture in syscall_sylixos_arm.go and
+ * syscall_sylixos_64.go, and their dynamic imports live in the
+ * hand-maintained syscall_sylixos_offt.go. Do not add //sys lines for
+ * them: mksyscall would generate wrappers that conflict with those
+ * implementations and would drop the import declarations.
  */
 //sys	Access(path string, mode uint32) (err error)
 //sys	Adjtime(delta *Timeval, olddelta *Timeval) (err error)
@@ -84,7 +92,6 @@ func sendfile(outfd int, infd int, offset *int64, count int) (written int, err e
 //sys	Fstat(fd int, stat *Stat_t) (err error)
 //sys	Fstatfs(fd int, stat *Statfs_t) (err error)
 //sys	Fsync(fd int) (err error)
-//sys	Ftruncate(fd int, length int64) (err error)
 //sysnb	Getegid() (egid int)
 //sysnb	Geteuid() (uid int)
 //sysnb	Getgid() (gid int)
@@ -109,8 +116,6 @@ func sendfile(outfd int, infd int, offset *int64, count int) (written int, err e
 //sys	Nanosleep(time *Timespec, leftover *Timespec) (err error)
 //sys	Open(path string, mode int, perm uint32) (fd int, err error)
 //sys	Pathconf(path string, name int) (val int, err error)
-//sys	pread(fd int, p []byte, offset int64) (n int, err error)
-//sys	pwrite(fd int, p []byte, offset int64) (n int, err error)
 //sys	read(fd int, p []byte) (n int, err error)
 //sys	Readlink(path string, buf []byte) (n int, err error)
 //sys	Rename(from string, to string) (err error)
@@ -129,11 +134,9 @@ func sendfile(outfd int, infd int, offset *int64, count int) (written int, err e
 //sys	Statfs(path string, stat *Statfs_t) (err error)
 //sys	Symlink(path string, link string) (err error)
 //sys	Sync() (err error)
-//sys	Truncate(path string, length int64) (err error)
 //sys	Umask(newmask int) (oldmask int)
 //sys	Unlink(path string) (err error)
 //sys	Unmount(path string, flags int) (err error)
 //sys	write(fd int, p []byte) (n int, err error)
 //sys	writev(fd int, iovecs []Iovec) (n uintptr, err error)
-//sys	mmap(addr uintptr, length uintptr, prot int, flag int, fd int, pos int64) (ret uintptr, err error)
 //sys	munmap(addr uintptr, length uintptr) (err error)

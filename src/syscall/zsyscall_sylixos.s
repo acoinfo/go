@@ -82,8 +82,6 @@ TEXT ·libc_fstatfs_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_fstatfs(SB)
 TEXT ·libc_fsync_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_fsync(SB)
-TEXT ·libc_ftruncate_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_ftruncate(SB)
 TEXT ·libc_getegid_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_getegid(SB)
 TEXT ·libc_geteuid_trampoline(SB),NOSPLIT,$0-0
@@ -132,10 +130,6 @@ TEXT ·libc_open_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_open(SB)
 TEXT ·libc_pathconf_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_pathconf(SB)
-TEXT ·libc_pread_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_pread(SB)
-TEXT ·libc_pwrite_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_pwrite(SB)
 TEXT ·libc_read_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_read(SB)
 TEXT ·libc_readlink_trampoline(SB),NOSPLIT,$0-0
@@ -172,8 +166,6 @@ TEXT ·libc_symlink_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_symlink(SB)
 TEXT ·libc_sync_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_sync(SB)
-TEXT ·libc_truncate_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_truncate(SB)
 TEXT ·libc_umask_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_umask(SB)
 TEXT ·libc_unlink_trampoline(SB),NOSPLIT,$0-0
@@ -184,12 +176,8 @@ TEXT ·libc_write_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_write(SB)
 TEXT ·libc_writev_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_writev(SB)
-TEXT ·libc_mmap_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_mmap(SB)
 TEXT ·libc_munmap_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_munmap(SB)
-TEXT ·libc_lseek_trampoline(SB),NOSPLIT,$0-0
-	JMP	libc_lseek(SB)
 TEXT ·libc_getcwd_trampoline(SB),NOSPLIT,$0-0
 	JMP	libc_getcwd(SB)
 TEXT ·libc_ioctl_trampoline(SB),NOSPLIT,$0-0

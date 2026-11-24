@@ -12,9 +12,11 @@ import (
 	"unsafe"
 )
 
-// getTLSBase / setTLSBase and the osSetupTLS fallback live in
-// os_sylixos_cgo_tls.go: they only exist for the architectures that
-// support cgo (arm64, amd64).
+// getTLSBase / setTLSBase and the TP==0 fallback live in
+// os_sylixos_cgo_tls.go, which is arm64-only. amd64 has a no-op
+// osSetupTLS in os_sylixos_amd64_tls.go; arm32 has one in
+// os_sylixos_arm.go, where the loader-installed thread pointer is
+// already valid and save_g/load_g handle the TP==0 case themselves.
 
 type mOS struct {
 	waitsema uintptr // semaphore for parking on locks
